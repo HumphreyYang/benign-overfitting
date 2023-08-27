@@ -56,7 +56,7 @@ def simulate_test_MSE(λ, μ, p, n, seed=0):
 
     print('*' * 80)
     print(f'summary of parameters: λ={λ}, μ={μ}, p={p}, n={n}', )
-    print(f'summary of shapes: X shape={X.shape}, Y shape={Y.shape}, X_train shape={X_train.shape}, Y_train shape={X_test.shape}, β_hat shape={β_hat.shape}')
+    print(f'summary of shapes: X shape={X.shape}, Y shape={Y.shape}, X_train shape={X_train.shape}, X_test shape={X_test.shape}, β_hat shape={β_hat.shape}')
     print(f'time taken = {time.time() - start_time:.2f} seconds')
     print('*' * 80)
     
