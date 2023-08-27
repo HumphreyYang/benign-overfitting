@@ -85,7 +85,7 @@ def parallel_run_simulations(μ_array, λ_array, n_array, p_array):
     with ProcessPoolExecutor() as executor:
         results = executor.map(simulate_test_MSE_for_grid, param_list)
 
-    for (a, b, c, d), result in zip(param_list, results):
+    for (a, b, c, d, λ, μ, p, n), result in zip(param_list, results):
         try:
             MSE_matrix[a, b, c, d] = result
         except Exception as e:
