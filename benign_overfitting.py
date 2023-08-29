@@ -41,13 +41,18 @@ def compute_Γ(μ, n, seed=0):
     A = np.diag(np.concatenate(([μ], np.ones(n-1))))
     return V @ A @ V.T
 
-def simulate_test_MSE(λ, μ, p, n, seed=0):
+def scale_norm(X, out_norm):
+    norm_X = np.linalg.norm(X)
+    X_normalized = (out_norm / norm_X) * X
+    return X_normalized
+
+def simulate_test_MSE(λ, μ, p, n, snr, seed=0):
     start_time = time.time()
     X = compute_X(λ, μ, p, n, seed=seed).T
     train_size = int(0.7 * n)
     X_train, X_test = np.split(X, [train_size])
     
-    β = np.ones(p)
+    β = scale_norm(np.ones(p), snr)
     σ = 1.0
     Y = compute_Y(X, β, σ, seed=seed)
     Y_train, Y_test = np.split(Y, [train_size])
@@ -56,13 +61,13 @@ def simulate_test_MSE(λ, μ, p, n, seed=0):
 
     print('*' * 80)
     print(f'summary of parameters: λ={λ}, μ={μ}, p={p}, n={n}', )
-    print(f'summary of shapes: X shape={X.shape}, Y shape={Y.shape}, X_train shape={X_train.shape}, X_test shape={X_test.shape}, β_hat shape={β_hat.shape}')
+    print(f'summary of shapes: X shape={X.shape}, Y shape={Y.shape}, \
+            X_train shape={X_train.shape}, X_test shape={X_test.shape}, β_hat shape={β_hat.shape}, \
+            norm_β_hat={np.linalg.norm(β_hat)}, norm_β={np.linalg.norm(β)}')
     print(f'time taken = {time.time() - start_time:.2f} seconds')
     print('*' * 80)
     
     return calculate_MSE(β_hat, X_test, Y_test)
-
-
 
 def vectorized_run_simulations(μ_array, λ_array, n_array, p_array):
     μ_grid, λ_grid, n_grid, p_grid = np.meshgrid(μ_array, λ_array, n_array, p_array, indexing='ij')
@@ -70,22 +75,22 @@ def vectorized_run_simulations(μ_array, λ_array, n_array, p_array):
     return vec_simulate_test_MSE(λ_grid, μ_grid, p_grid, n_grid)
 
 def simulate_test_MSE_for_grid(params):
-    a, b, c, d, λ, μ, p, n = params
-    return simulate_test_MSE(λ, μ, p, n, seed=0)
+    a, b, c, d, λ, μ, p, n, snr = params
+    return simulate_test_MSE(λ, μ, p, n, snr, seed=0)
 
-def parallel_run_simulations(μ_array, λ_array, n_array, p_array):
+def parallel_run_simulations(μ_array, λ_array, n_array, p_array, snr):
     MSE_matrix = np.zeros((len(μ_array), len(λ_array), len(n_array), len(p_array)))
 
-    param_list = [(a, b, c, d, λ, μ, p, n) 
+    param_list = [(a, b, c, d, λ, μ, p, n, snr) 
                   for a, μ in enumerate(μ_array)
                   for b, λ in enumerate(λ_array)
                   for c, n in enumerate(n_array)
                   for d, p in enumerate(p_array)]
 
-    with ProcessPoolExecutor() as executor:
+    with ProcessPoolExecutor(max_workers=7) as executor:
         results = executor.map(simulate_test_MSE_for_grid, param_list)
 
-    for (a, b, c, d, λ, μ, p, n), result in zip(param_list, results):
+    for (a, b, c, d, λ, μ, p, n, snr), result in zip(param_list, results):
         try:
             MSE_matrix[a, b, c, d] = result
         except Exception as e:
@@ -94,12 +99,20 @@ def parallel_run_simulations(μ_array, λ_array, n_array, p_array):
     return MSE_matrix
 
 if __name__ == "__main__":
-    np.random.seed(0)  # Set seed once
-    μ_array = np.linspace(1, 100, 5)
-    λ_array = np.linspace(1, 100, 5)
-    γ = np.linspace(0.5, 100, 5)
-    n_array = np.array([50])
-    p_array = (γ * n_array).astype(int)
+    np.random.seed(0)
+    μ_param = (1, 100, 20)
+    λ_param = (1, 100, 20)
+    γ_param = (0.5, 50, 20)
+    n_param = [200]
+    snr_param = 5
 
-    MSE_matrix = parallel_run_simulations(μ_array, λ_array, n_array, p_array)
-    np.save('benign-overfitting/mse_matrix.npy', MSE_matrix)
+    μ_array = np.linspace(*μ_param)
+    λ_array = np.linspace(*λ_param)
+    γ = np.linspace(*γ_param)
+    n_array = np.array(n_param)
+    p_array = (γ * n_array).astype(int)
+    snr = snr_param
+
+    MSE_matrix = parallel_run_simulations(μ_array, λ_array, n_array, p_array, snr)
+    np.save(f'mse_matrix_{μ_param}_{λ_param}_{γ_param}_{n_param}_{snr_param}.npy', MSE_matrix)
+    print('Finished Runing Simulations')
