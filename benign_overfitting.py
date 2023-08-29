@@ -98,7 +98,7 @@ if __name__ == "__main__":
     μ_array = np.linspace(1, 100, 5)
     λ_array = np.linspace(1, 100, 5)
     γ = np.linspace(0.5, 100, 5)
-    n_array = np.array([100])
+    n_array = np.array([50])
     p_array = (γ * n_array).astype(int)
 
     MSE_matrix = parallel_run_simulations(μ_array, λ_array, n_array, p_array)
