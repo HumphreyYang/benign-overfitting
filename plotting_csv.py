@@ -8,10 +8,10 @@ from ipywidgets import interactive, widgets
 import pandas as pd
 
 def interative_param_vs_mse(df, fixed_μ, fixed_λ, fixed_γ):
-    fig, axs = plt.subplots(3, 1, figsize=(6, 6))
-    plot_param_vs_mse(df, 'λ', {'μ': fixed_μ, 'γ': fixed_γ}, axs[0])
-    plot_param_vs_mse(df, 'μ', {'λ': fixed_λ, 'γ': fixed_γ}, axs[1])
-    plot_param_vs_mse(df, 'γ', {'μ': fixed_μ, 'λ': fixed_λ}, axs[2])
+    fig, axs = plt.subplots(3, 1, figsize=(12, 16))
+    plot_param_vs_mse(df, 'γ', {'μ': fixed_μ, 'λ': fixed_λ}, axs[0])
+    plot_param_vs_mse(df, 'λ', {'μ': fixed_μ, 'γ': fixed_γ}, axs[1])
+    plot_param_vs_mse(df, 'μ', {'λ': fixed_λ, 'γ': fixed_γ}, axs[2])
     plt.savefig('MSE_against_parameters.png')
     plt.tight_layout()
     plt.show()
@@ -24,6 +24,8 @@ def plot_param_vs_mse(data, param_to_vary, fixed_params, ax=None):
     filter_conditions = np.all([data[param] == nearest_value for param, nearest_value in nearest_fixed_params.items()], axis=0)
     filtered_data = data[filter_conditions]
 
+    print(len(filtered_data))
+
     ax.plot(filtered_data[param_to_vary], filtered_data['MSE'], marker='o')
     ax.set_xlabel(param_to_vary)
     ax.set_ylabel('MSE')
@@ -31,7 +33,7 @@ def plot_param_vs_mse(data, param_to_vary, fixed_params, ax=None):
     ax.grid(True)
     return ax
 
-def interative_bars(df):
+def interative_bars_line(df):
     # Create sliders
     μ_slider = widgets.FloatSlider(min=np.min(df['μ']), max=np.max(df['μ']), step=(np.max(df['μ'])-np.min(df['μ']))/50, description='μ')
     λ_slider = widgets.FloatSlider(min=np.min(df['λ']), max=np.max(df['λ']), step=(np.max(df['λ'])-np.min(df['λ']))/50, description='λ')
@@ -43,12 +45,28 @@ def interative_bars(df):
                                 fixed_μ=μ_slider, fixed_λ=λ_slider, fixed_γ=γ_slider)
     return interactive_plot
 
+def interative_bars_3d(df):
+    # Create sliders
+    x_param = widgets.Dropdown(options=['μ', 'λ', 'γ'], description='x-axis')
+    y_param = widgets.Dropdown(options=['λ', 'μ', 'γ'], description='y-axis')
+    fixed_params = widgets.Dropdown(options=['γ', 'μ', 'λ'], description='Fixed Params')
+    fixed_params_slider = widgets.FloatSlider(min=0, max=100, 
+                                              step=100/50, description='value for fixed parameter')
+
+    # Generate interactive plots
+    interactive_plot = interactive(lambda x_param, y_param, fixed_params, fixed_params_values: 
+                                   plot_surface_MSE(df, x_param=x_param, y_param=y_param, fixed_params=fixed_params, 
+                                                    fixed_params_values=fixed_params_values), x_param=x_param, 
+                                                    y_param=y_param, fixed_params=fixed_params, fixed_params_values=fixed_params_slider)
+    return interactive_plot
+
+
 def find_nearest_value(array, value):
     return min(array, key=lambda x: abs(x - value))
 
 from scipy.interpolate import griddata
 
-def plot_surface_MSE(data, x_param, y_param, z_param='MSE', fixed_params=None):
+def plot_surface_MSE(data, x_param, y_param, fixed_params, fixed_params_values, z_param='MSE'):
     """
     Generate a surface plot for MSE against varying parameters, given fixed values for other parameters.
     
@@ -59,8 +77,7 @@ def plot_surface_MSE(data, x_param, y_param, z_param='MSE', fixed_params=None):
     - fixed_params: Dictionary of fixed parameter values
     """
     # Find the nearest available values in the dataset for the fixed parameters
-    nearest_fixed_params = {param: find_nearest_value(data[param].unique(), 
-                                                      value) for param, value in fixed_params.items()} if fixed_params else {}
+    nearest_fixed_params = {fixed_params: find_nearest_value(data[fixed_params].unique(), fixed_params_values)}
     
     # Filter the data based on the nearest fixed parameters
     filter_conditions = np.all([data[param] == nearest_value for param, 
@@ -105,4 +122,4 @@ if __name__ == "__main__":
 
     plot_surface_MSE(df, 'μ', 'γ', fixed_params={'λ': 100})
 
-    interative_bars(df)
+    interative_bars_line(df)
