@@ -5,46 +5,67 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 import time
 import csv
 from datetime import datetime
+import numba
 
+@numba.njit
 def solve_β_hat(X, Y):
     XTX = X.T @ X
     β_hat = np.linalg.pinv(XTX) @ X.T @ Y
     return β_hat
 
+@numba.njit
 def calculate_MSE(β_hat, X, Y):
     pred_diff = Y - X @ β_hat
     return np.sum(pred_diff ** 2) / len(Y)
 
-def compute_Y(X, β, σ):
+@numba.njit
+def compute_Y(X, β, σ, seed=None):
+    if seed is not None:
+        np.random.seed(seed)
     ε = np.random.normal(0, σ, len(X))
     return X @ β + ε
 
-def compute_X(λ, μ, p, n):
-    C = compute_C(λ, p)
-    Γ = compute_Γ(μ, n)
+@numba.njit
+def compute_X(λ, μ, p, n, seed=None):
+    if seed is not None:
+        np.random.seed(seed)
+        C = compute_C(λ, p, seed+1)
+        Γ = compute_Γ(μ, n, seed+2)
+    else:
+        C = compute_C(λ, p)
+        Γ = compute_Γ(μ, n)
     Z = np.random.normal(0, 1, (p, n))
     return C @ Z @ Γ
 
-def compute_C(λ, p):
-    U = ortho_group.rvs(dim=(p))
-    assert np.allclose(U @ U.T, np.eye(p))
-    Λ = np.diag(np.concatenate(([λ], np.ones(p-1))))
+@numba.njit
+def compute_C(λ, p, seed=None):
+    if seed is not None:
+        np.random.seed(seed)
+    a = np.random.random(size=(p, p))
+    U, _ = np.linalg.qr(a)
+    assert np.allclose(U @ U.T, np.eye(p), rtol=1e-05, atol=1e-08, equal_nan=False)
+    Λ = np.diag(np.concatenate((np.array([λ]), np.ones(p-1))))
     return U @ Λ @ U.T
 
-def compute_Γ(μ, n):
-    V = ortho_group.rvs(dim=(n))
-    assert np.allclose(V @ V.T, np.eye(n))
-    A = np.diag(np.concatenate(([μ], np.ones(n-1))))
+@numba.njit
+def compute_Γ(μ, n, seed=None):
+    if seed is not None:
+        np.random.seed(seed)
+    a = np.random.random(size=(n, n))
+    V, _ = np.linalg.qr(a)
+    assert np.allclose(V @ V.T, np.eye(n), rtol=1e-05, atol=1e-08, equal_nan=False)
+    A = np.diag(np.concatenate((np.array([μ]), np.ones(n-1))))
     return V @ A @ V.T
 
+@numba.njit
 def scale_norm(X, out_norm):
     norm_X = np.linalg.norm(X)
     X_normalized = (out_norm / norm_X) * X
     return X_normalized
 
-def simulate_test_MSE(λ, μ, p, n, snr):
+def simulate_test_MSE(λ, μ, p, n, snr, seed=None):
     start_time = time.time()
-    X = compute_X(λ, μ, p, n).T
+    X = compute_X(λ, μ, p, n, seed).T
     train_size = int(0.7 * n)
     X_train, X_test = np.split(X, [train_size])
     
@@ -54,15 +75,6 @@ def simulate_test_MSE(λ, μ, p, n, snr):
     Y_train, Y_test = np.split(Y, [train_size])
 
     β_hat = solve_β_hat(X_train, Y_train)
-
-    print('*' * 80)
-    print(f'summary of parameters: λ={λ}, μ={μ}, p={p}, n={n}', )
-    print(f'summary of shapes: X shape={X.shape}, Y shape={Y.shape}, \
-            X_train shape={X_train.shape}, X_test shape={X_test.shape}, β_hat shape={β_hat.shape}, \
-            norm_β_hat={np.linalg.norm(β_hat)}, norm_β={np.linalg.norm(β)}')
-    print(f'time taken = {time.time() - start_time:.2f} seconds')
-    print('*' * 80)
-
     return calculate_MSE(β_hat, X_test, Y_test)
 
 def vectorized_run_simulations(μ_array, λ_array, n_array, p_array):
@@ -72,7 +84,7 @@ def vectorized_run_simulations(μ_array, λ_array, n_array, p_array):
 
 def simulate_test_MSE_for_grid(params):
     λ, μ, p, n, snr = params
-    simulation_result = simulate_test_MSE(λ, μ, p, n, snr)
+    simulation_result = simulate_test_MSE(λ, μ, p, n, snr, seed=0)
     return simulation_result
 
 # def parallel_run_simulations(μ_array, λ_array, n_array, p_array, snr):
@@ -95,7 +107,7 @@ def simulate_test_MSE_for_grid(params):
 
 #     return MSE_matrix
 
-def parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr, filename='results.csv'):
+def parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr, parallel=True, filename='results.csv'):
     with open(filename, 'w+', newline='') as csvfile:
         csvwriter = csv.writer(csvfile)
         csvwriter.writerow(['λ', 'μ', 'p', 'n', 'snr', 'MSE'])  # Write the header row
@@ -105,37 +117,35 @@ def parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr, f
                         for λ in λ_array
                         for n in n_array
                         for p in p_array]
-        
-        future_list = []
-        with ProcessPoolExecutor() as executor:
-            for params in param_list:
-                future = executor.submit(simulate_test_MSE_for_grid, params)
-                future_list.append([params, future])
+        if parallel:
+            future_list = []
+            with ProcessPoolExecutor() as executor:
+                print('submitting jobs to executor')
+                for params in tqdm(param_list):
+                    print('submitting params: ', params)
+                    future = executor.submit(simulate_test_MSE_for_grid, params)
+                    future_list.append([params, future])
 
-            for params_future in future_list:
-                params = params_future[0]
-                future = params_future[1]
-                try:
-                    csvwriter.writerow([*params, future.result()])
-                except Exception as e:
-                    print(e)
+                for params_future in future_list:
+                    params = params_future[0]
+                    future = params_future[1]
+                    try:
+                        csvwriter.writerow([*params, future.result()])
+                    except Exception as e:
+                        print(e)
+        else:
+            for params in tqdm(param_list):
+                csvwriter.writerow([*params, simulate_test_MSE_for_grid(params)])
     
     return None
 
 if __name__ == "__main__":
-    np.random.seed(0)
-    μ_param = (1, 100, 20)
-    λ_param = (1, 100, 20)
-    γ_param = (0.5, 1.5, 200)
-    n_param = [200]
-    snr_param = 5
-
-    μ_array = np.linspace(*μ_param)
-    λ_array = np.linspace(*λ_param)
-    γ = np.linspace(*γ_param)
-    n_array = np.array(n_param)
+    μ_array = np.linspace(1, 100, 100)
+    λ_array = np.linspace(1, 100, 100)
+    γ = np.linspace(0.5, 1.5, 200)
+    n_array = np.array([100])
     p_array = (γ * n_array).astype(int)
-    snr = snr_param
+    snr = 5
 
     now = datetime.now()
     dt_string = now.strftime("%d-%m-%Y_%H:%M:%S")
@@ -144,5 +154,5 @@ if __name__ == "__main__":
     # MSE_matrix = parallel_run_simulations(μ_array, λ_array, n_array, p_array, snr)
     # np.save(f'mse_matrix_{μ_param}_{λ_param}_{γ_param}_{n_param}_{snr_param}.npy', MSE_matrix)
 
-    parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr, filename=f'results_[{dt_string}].csv')
+    parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr, parallel=False, filename=f'results_[{dt_string}].csv')
     print('Finished Runing Simulations')
