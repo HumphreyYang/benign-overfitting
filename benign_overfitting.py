@@ -98,7 +98,7 @@ def simulate_test_MSE_for_grid(params):
 def parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr, filename='results.csv'):
     with open(filename, 'w+', newline='') as csvfile:
         csvwriter = csv.writer(csvfile)
-        csvwriter.writerow(['λ', 'μ', 'p', 'n', 'MSE'])  # Write the header row
+        csvwriter.writerow(['λ', 'μ', 'p', 'n', 'snr', 'MSE'])  # Write the header row
         
         param_list = [(λ, μ, p, n, snr) 
                         for μ in μ_array
@@ -124,9 +124,9 @@ def parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr, f
 
 if __name__ == "__main__":
     np.random.seed(0)
-    μ_param = (1, 100, 1)
-    λ_param = (1, 100, 1)
-    γ_param = (0.5, 5, 2)
+    μ_param = (1, 100, 20)
+    λ_param = (1, 100, 20)
+    γ_param = (0.5, 1.5, 200)
     n_param = [200]
     snr_param = 5
 
