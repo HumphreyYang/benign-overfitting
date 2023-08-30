@@ -2,8 +2,6 @@ library(pracma)
 library(doParallel)
 library(foreach)
 
-setwd("/Users/humphreyyang/Desktop/code/benign-overfitting")
-
 # Function Definitions
 solve_beta_hat <- function(X, Y) {
   XTX <- t(X) %*% X
@@ -66,14 +64,14 @@ simulate_test_MSE <- function(lambda, mu, p, n, snr, seed) {
   Y_test <- Y[(train_size + 1):n]
   beta_hat <- solve_beta_hat(X_train, Y_train)
   
-  cat(paste0("\n", strrep("*", 80)),
+  cat(paste0("\n", strrep("*", 80), "\n"),
         paste('summary of parameters: lambda=', lambda, ', mu=', mu, ', p=', p, ', n=', n), 
         paste('summary of shapes: X shape=', dim(X), ', Y shape=', length(Y), 
             ', X_train shape=', dim(X_train), ', X_test shape=', dim(X_test), 
             ', beta_hat shape=', dim(beta_hat), ', norm_beta_hat=', norm(beta_hat, 'F'),
             ', norm_beta=', norm(beta, 'F')),
         paste('time taken = ', as.numeric(difftime(Sys.time(), start_time, units = "secs")), ' seconds'),
-        paste0("\n", strrep("*", 80)))
+        paste0("\n", strrep("*", 80), "\n"))
   
   return(calculate_MSE(beta_hat, X_test, Y_test))
 }
