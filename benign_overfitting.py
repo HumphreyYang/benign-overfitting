@@ -7,25 +7,41 @@ import csv
 from datetime import datetime
 import numba
 
-@numba.njit
+@numba.njit(cache=True, fastmath=True)
+def check_orthonormal(A):
+    n, m = A.shape
+
+    # Check if columns are unit vectors
+    col_norms = np.linalg.norm(A, ord=2)
+    if not np.allclose(col_norms, 1, atol=1e-8, rtol=1e-8, equal_nan=False):
+       return False
+    
+    # Check orthogonality
+    ortho_check = np.dot(A.T, A)
+    if not np.allclose(ortho_check, np.eye(n), atol=1e-8, rtol=1e-8, equal_nan=False):
+       return False
+    
+    return True
+
+@numba.njit(cache=True, fastmath=True)
 def solve_β_hat(X, Y):
     XTX = X.T @ X
     β_hat = np.linalg.pinv(XTX) @ X.T @ Y
     return β_hat
 
-@numba.njit
+@numba.njit(cache=True, fastmath=True)
 def calculate_MSE(β_hat, X, Y):
     pred_diff = Y - X @ β_hat
     return np.sum(pred_diff ** 2) / len(Y)
 
-@numba.njit
+@numba.njit(cache=True, fastmath=True)
 def compute_Y(X, β, σ, seed=None):
     if seed is not None:
         np.random.seed(seed)
     ε = np.random.normal(0, σ, len(X))
     return X @ β + ε
 
-@numba.njit
+@numba.njit(cache=True, fastmath=True)
 def compute_X(λ, μ, p, n, seed=None):
     if seed is not None:
         np.random.seed(seed)
@@ -37,34 +53,35 @@ def compute_X(λ, μ, p, n, seed=None):
     Z = np.random.normal(0, 1, (p, n))
     return C @ Z @ Γ
 
-@numba.njit
+@numba.njit(cache=True, fastmath=True)
 def compute_C(λ, p, seed=None):
     if seed is not None:
         np.random.seed(seed)
     a = np.random.random(size=(p, p))
     U, _ = np.linalg.qr(a)
-    assert np.allclose(U @ U.T, np.eye(p), rtol=1e-05, atol=1e-08, equal_nan=False)
+    assert check_orthonormal(U), 'not orthonormal'
     Λ = np.diag(np.concatenate((np.array([λ]), np.ones(p-1))))
     return U @ Λ @ U.T
 
-@numba.njit
+@numba.njit(cache=True, fastmath=True)
 def compute_Γ(μ, n, seed=None):
     if seed is not None:
         np.random.seed(seed)
     a = np.random.random(size=(n, n))
     V, _ = np.linalg.qr(a)
-    assert np.allclose(V @ V.T, np.eye(n), rtol=1e-05, atol=1e-08, equal_nan=False)
+    assert check_orthonormal(V), 'not orthonormal'
     A = np.diag(np.concatenate((np.array([μ]), np.ones(n-1))))
     return V @ A @ V.T
 
-@numba.njit
+@numba.njit(cache=True, fastmath=True)
 def scale_norm(X, out_norm):
     norm_X = np.linalg.norm(X)
     X_normalized = (out_norm / norm_X) * X
     return X_normalized
 
+@numba.njit(cache=True, fastmath=True)
 def simulate_test_MSE(λ, μ, p, n, snr, seed=None):
-    start_time = time.time()
+    # start_time = time.time()
     X = compute_X(λ, μ, p, n, seed).T
     train_size = int(0.7 * n)
     X_train, X_test = np.split(X, [train_size])
@@ -75,6 +92,15 @@ def simulate_test_MSE(λ, μ, p, n, snr, seed=None):
     Y_train, Y_test = np.split(Y, [train_size])
 
     β_hat = solve_β_hat(X_train, Y_train)
+
+    # print('*' * 80)
+    # print(f'summary of parameters: λ={λ}, μ={μ}, p={p}, n={n}')
+    # print(f'summary of shapes: X shape={X.shape}, Y shape={Y.shape}, \
+    #         X_train shape={X_train.shape}, X_test shape={X_test.shape}, β_hat shape={β_hat.shape}, \
+    #         norm_β_hat={np.linalg.norm(β_hat)}, norm_β={np.linalg.norm(β)}')
+    # print(f'time taken = {time.time() - start_time} seconds')
+    # print('*' * 80)
+
     return calculate_MSE(β_hat, X_test, Y_test)
 
 def vectorized_run_simulations(μ_array, λ_array, n_array, p_array):
