@@ -8,7 +8,7 @@ from mpl_toolkits.mplot3d import Axes3D
 def plot_line_graphs(MSE_matrix, μ_array, λ_array, p_array, n_array):
     
     # Calculate γ values (p/n)
-    γ_array = p_array / n_array[:, None]
+    γ_array = p_array / n_array
 
     # Fix μ and λ, plot relationship with γ
     fixed_μ, fixed_λ = μ_array[-1], λ_array[-1]
@@ -176,5 +176,5 @@ if __name__ == "__main__":
     MSE_matrix = np.load(file_name)
     
     plot_MSE_against_parameters(MSE_matrix, μ_array, λ_array, n_array, p_array, γ_array, fixed_μ=1, fixed_λ=1, fixed_γ=100)
-    plot_3D_MSE(MSE_matrix, μ_array, λ_array, γ_array, fixed_γ=1)
+    plot_3D_MSE(MSE_matrix, μ_array, λ_array, γ_array, fixed_γ=1.5)
     display(interactive_plot(MSE_matrix, μ_array, λ_array, n_array, p_array, γ_array))
