@@ -110,7 +110,7 @@ def vectorized_run_simulations(μ_array, λ_array, n_array, p_array):
 
 def simulate_test_MSE_for_grid(params):
     λ, μ, p, n, snr = params
-    simulation_result = simulate_test_MSE(λ, μ, p, n, snr, seed=0)
+    simulation_result = simulate_test_MSE(λ, μ, p, n, snr, seed=1311)
     return simulation_result
 
 # def parallel_run_simulations(μ_array, λ_array, n_array, p_array, snr):
@@ -168,11 +168,11 @@ def parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr, p
 if __name__ == "__main__":
     μ_array = np.linspace(1, 100, 100)
     λ_array = np.linspace(1, 100, 100)
-    γ = np.linspace(0.5, 1.5, 200)
+    γ = np.linspace(0.05, 5.05, 500)
     n_array = np.array([100])
-    p_array = (γ * n_array).astype(int)
+    p_array = np.unique((γ * n_array).astype(int))
     snr = 5
-
+    print('number of parameters: ', len(p_array))
     now = datetime.now()
     dt_string = now.strftime("%d-%m-%Y_%H:%M:%S")
     print("date and time =", dt_string)
