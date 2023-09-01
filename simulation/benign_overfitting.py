@@ -6,6 +6,8 @@ import time
 import csv
 from datetime import datetime
 import numba
+from numba import prange
+from scipy.stats import ortho_group
 
 @numba.njit(cache=True, fastmath=True)
 def check_orthonormal(A):
@@ -26,7 +28,7 @@ def check_orthonormal(A):
 @numba.njit(cache=True, fastmath=True)
 def solve_β_hat(X, Y):
     XTX = X.T @ X
-    β_hat = np.linalg.pinv(XTX) @ X.T @ Y
+    β_hat = np.linalg.solve(XTX, X.T @ Y)
     return β_hat
 
 @numba.njit(cache=True, fastmath=True)
@@ -42,34 +44,21 @@ def compute_Y(X, β, σ, seed=None):
     return X @ β + ε
 
 @numba.njit(cache=True, fastmath=True)
-def compute_X(λ, μ, p, n, seed=None):
+def compute_X(λ, μ, p, n, U, V, seed=None):
+    C = compute_C(λ, p, U)
+    Γ = compute_Γ(μ, n, V)
     if seed is not None:
         np.random.seed(seed)
-        C = compute_C(λ, p, seed+1)
-        Γ = compute_Γ(μ, n, seed+2)
-    else:
-        C = compute_C(λ, p)
-        Γ = compute_Γ(μ, n)
     Z = np.random.normal(0, 1, (p, n))
     return C @ Z @ Γ
 
 @numba.njit(cache=True, fastmath=True)
-def compute_C(λ, p, seed=None):
-    if seed is not None:
-        np.random.seed(seed)
-    a = np.random.random(size=(p, p))
-    U, _ = np.linalg.qr(a)
-    assert check_orthonormal(U), 'not orthonormal'
+def compute_C(λ, p, U):
     Λ = np.diag(np.concatenate((np.array([λ]), np.ones(p-1))))
     return U @ Λ @ U.T
 
 @numba.njit(cache=True, fastmath=True)
-def compute_Γ(μ, n, seed=None):
-    if seed is not None:
-        np.random.seed(seed)
-    a = np.random.random(size=(n, n))
-    V, _ = np.linalg.qr(a)
-    assert check_orthonormal(V), 'not orthonormal'
+def compute_Γ(μ, n, V):
     A = np.diag(np.concatenate((np.array([μ]), np.ones(n-1))))
     return V @ A @ V.T
 
@@ -80,12 +69,27 @@ def scale_norm(X, out_norm):
     return X_normalized
 
 @numba.njit(cache=True, fastmath=True)
+def generate_orthonormal_matrix(dim, seed=None):
+    if seed is not None:
+            np.random.seed(seed)
+    a = np.random.random(size=(dim, dim))
+    res, _ = np.linalg.qr(a)
+    return np.ascontiguousarray(res)
+
+@numba.njit(cache=True, fastmath=True)
 def simulate_test_MSE(λ, μ, p, n, snr, seed=None):
     # start_time = time.time()
-    X = compute_X(λ, μ, p, n, seed).T
+    # Generate orthonormal matrices
+    U = generate_orthonormal_matrix(p, seed=seed+1)
+    V = generate_orthonormal_matrix(n, seed=seed+2)
+
+    X = compute_X(λ, μ, p, n, U, V, seed).T
+
     train_size = int(0.7 * n)
     X_train, X_test = np.split(X, [train_size])
-    
+    X_train = np.ascontiguousarray(X_train)
+    X_test = np.ascontiguousarray(X_test)
+
     β = scale_norm(np.ones(p), snr)
     σ = 1.0
     Y = compute_Y(X, β, σ)
@@ -109,36 +113,16 @@ def vectorized_run_simulations(μ_array, λ_array, n_array, p_array):
     return vec_simulate_test_MSE(λ_grid, μ_grid, p_grid, n_grid)
 
 def simulate_test_MSE_for_grid(params):
-    λ, μ, p, n, snr = params
-    simulation_result = simulate_test_MSE(λ, μ, p, n, snr, seed=1311)
+    λ, μ, p, n, snr, seed = params
+    simulation_result = simulate_test_MSE(λ, μ, p, n, snr, seed=seed)
     return simulation_result
 
-# def parallel_run_simulations(μ_array, λ_array, n_array, p_array, snr):
-#     MSE_matrix = np.zeros((len(μ_array), len(λ_array), len(n_array), len(p_array)))
-
-#     param_list = [(a, b, c, d, λ, μ, p, n, snr) 
-#                   for a, μ in enumerate(μ_array)
-#                   for b, λ in enumerate(λ_array)
-#                   for c, n in enumerate(n_array)
-#                   for d, p in enumerate(p_array)]
-
-#     with ProcessPoolExecutor(max_workers=7) as executor:
-#         results = executor.map(simulate_test_MSE_for_grid, param_list)
-
-#     for (a, b, c, d, λ, μ, p, n, snr), result in zip(param_list, results):
-#         try:
-#             MSE_matrix[a, b, c, d] = result
-#         except Exception as e:
-#             print(f"An exception occurred: {e}")
-
-#     return MSE_matrix
-
-def parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr, parallel=True, filename='results.csv'):
+def parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr, seed, parallel=True, filename='results.csv'):
     with open(filename, 'w+', newline='') as csvfile:
         csvwriter = csv.writer(csvfile)
         csvwriter.writerow(['λ', 'μ', 'p', 'n', 'snr', 'MSE'])  # Write the header row
-        
-        param_list = [(λ, μ, p, n, snr) 
+
+        param_list = [(λ, μ, p, n, snr, seed) 
                         for μ in μ_array
                         for λ in λ_array
                         for n in n_array
@@ -171,14 +155,14 @@ if __name__ == "__main__":
     γ = np.linspace(0.05, 5.05, 500)
     n_array = np.array([100])
     p_array = np.unique((γ * n_array).astype(int))
-    snr = 5
+    snr = 1.0
+    seed = 1311
+
     print('number of parameters: ', len(p_array))
     now = datetime.now()
     dt_string = now.strftime("%d-%m-%Y_%H:%M:%S")
     print("date and time =", dt_string)
 
-    # MSE_matrix = parallel_run_simulations(μ_array, λ_array, n_array, p_array, snr)
-    # np.save(f'mse_matrix_{μ_param}_{λ_param}_{γ_param}_{n_param}_{snr_param}.npy', MSE_matrix)
-
-    parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr, parallel=False, filename=f'results_[{dt_string}].csv')
+    parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr, seed=seed, 
+                                    parallel=False, filename=f'results/results_[{dt_string}-{seed}].csv')
     print('Finished Runing Simulations')

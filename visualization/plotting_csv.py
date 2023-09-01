@@ -8,7 +8,7 @@ from ipywidgets import interactive, widgets
 import pandas as pd
 
 def interative_param_vs_mse(df, fixed_μ, fixed_λ, fixed_γ):
-    fig, axs = plt.subplots(3, 1, figsize=(12, 16))
+    fig, axs = plt.subplots(3, 1, figsize=(10, 10))
     plot_param_vs_mse(df, 'γ', {'μ': fixed_μ, 'λ': fixed_λ}, axs[0])
     plot_param_vs_mse(df, 'λ', {'μ': fixed_μ, 'γ': fixed_γ}, axs[1])
     plot_param_vs_mse(df, 'μ', {'λ': fixed_λ, 'γ': fixed_γ}, axs[2])
