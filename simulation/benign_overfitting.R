@@ -9,7 +9,7 @@ parallel_run_simulations <- function(mu_array, lambda_array, n_array, p_array, s
                            'compute_Y', 'compute_X', 'compute_C', 'compute_Gamma', 'scale_norm')
   clusterExport(cl, functions_to_export)
   param_list <- expand.grid(lambda=lambda_array, mu=mu_array, p=p_array, n=n_array, snr=snr, seed=seed)
-  print(paste'number of parameters:', nrow(param_list))
+  print(paste('number of parameters:', nrow(param_list)))
   results_df <- data.frame()
   
   results <- foreach(idx=1:nrow(param_list), .combine=rbind, .packages=c('pracma', 'MASS')) %dopar% {
@@ -29,13 +29,13 @@ parallel_run_simulations <- function(mu_array, lambda_array, n_array, p_array, s
 time = Sys.time()
 date = Sys.Date()
 
-mu_array <- seq(1, 100, length=2)
-lambda_array <- seq(1, 100, length=2)
-gamma_array <- seq(0.05, 5.05, length=2)
+mu_array <- seq(1, 20, length=100)
+lambda_array <- seq(1, 20, length=100)
+gamma_array <- seq(0.05, 5.05, length=500)
 n_array <- c(100)
 p_array <- as.integer(gamma_array * n_array)
 snr <- 5
-seed=100
+seed <- 100
 
 print(paste0('mu_array: ', mu_array))
 print(paste0('lambda_array: ', lambda_array))
