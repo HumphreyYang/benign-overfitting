@@ -28,7 +28,7 @@ def check_orthonormal(A):
 @numba.njit(cache=True, fastmath=True)
 def solve_β_hat(X, Y):
     XTX = X.T @ X
-    β_hat = np.linalg.solve(XTX, X.T @ Y)
+    β_hat = np.linalg.pinv(XTX) @ X.T @ Y
     return β_hat
 
 @numba.njit(cache=True, fastmath=True)
@@ -74,14 +74,19 @@ def generate_orthonormal_matrix(dim, seed=None):
             np.random.seed(seed)
     a = np.random.random(size=(dim, dim))
     res, _ = np.linalg.qr(a)
+    assert check_orthonormal(res)
     return np.ascontiguousarray(res)
 
 @numba.njit(cache=True, fastmath=True)
 def simulate_test_MSE(λ, μ, p, n, snr, seed=None):
     # start_time = time.time()
     # Generate orthonormal matrices
-    U = generate_orthonormal_matrix(p, seed=seed+1)
-    V = generate_orthonormal_matrix(n, seed=seed+2)
+    if seed is not None:
+        U = generate_orthonormal_matrix(p, seed=seed+1)
+        V = generate_orthonormal_matrix(n, seed=seed+2)
+    else:
+        U = generate_orthonormal_matrix(p)
+        V = generate_orthonormal_matrix(n)
 
     X = compute_X(λ, μ, p, n, U, V, seed).T
 
@@ -117,16 +122,17 @@ def simulate_test_MSE_for_grid(params):
     simulation_result = simulate_test_MSE(λ, μ, p, n, snr, seed=seed)
     return simulation_result
 
-def parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr, seed, parallel=True, filename='results.csv'):
+def parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr, seed=None, parallel=True, filename='results.csv'):
     with open(filename, 'w+', newline='') as csvfile:
         csvwriter = csv.writer(csvfile)
-        csvwriter.writerow(['λ', 'μ', 'p', 'n', 'snr', 'MSE'])  # Write the header row
+        csvwriter.writerow(['λ', 'μ', 'p', 'n', 'snr', 'seed', 'MSE'])  # Write the header row
 
         param_list = [(λ, μ, p, n, snr, seed) 
                         for μ in μ_array
                         for λ in λ_array
                         for n in n_array
                         for p in p_array]
+
         if parallel:
             future_list = []
             with ProcessPoolExecutor() as executor:
@@ -155,9 +161,10 @@ if __name__ == "__main__":
     γ = np.linspace(0.05, 5.05, 500)
     n_array = np.array([100])
     p_array = np.unique((γ * n_array).astype(int))
-    snr = 1.0
+    snr = 5.0
     seed = 1311
 
+    start_time = time.time()
     print('number of parameters: ', len(p_array))
     now = datetime.now()
     dt_string = now.strftime("%d-%m-%Y_%H:%M:%S")
@@ -165,4 +172,5 @@ if __name__ == "__main__":
 
     parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr, seed=seed, 
                                     parallel=False, filename=f'results/results_[{dt_string}-{seed}].csv')
+    print(start_time - time.time())
     print('Finished Runing Simulations')
