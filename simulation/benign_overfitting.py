@@ -6,7 +6,13 @@ import time
 import csv
 from datetime import datetime
 import numba
+from numba import prange
 from scipy.stats import ortho_group
+import pandas as pd
+from numba.typed import Dict
+from numba import types
+from numba.typed import List
+from numba_progress import ProgressBar
 
 @numba.njit(cache=True, fastmath=True, nogil=True)
 def solve_β_hat(X, Y):
@@ -94,6 +100,7 @@ def vectorized_run_simulations(μ_array, λ_array, n_array, p_array):
     vec_simulate_test_MSE = np.vectorize(simulate_test_MSE)
     return vec_simulate_test_MSE(λ_grid, μ_grid, p_grid, n_grid)
 
+@numba.njit(cache=True, fastmath=True, nogil=True)
 def simulate_test_MSE_for_grid(params):
     λ, μ, p, n, snr, seed = params
     simulation_result = simulate_test_MSE(λ, μ, p, n, snr, seed=seed)
@@ -129,29 +136,44 @@ def paralleled_compute(param_list, simulate_test_MSE_for_grid, csvwriter):
         
         if results_buffer:
             csvwriter.writerows(results_buffer)
-            
-def parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr, seed=None, parallel=True, filename='results.csv'):
-    with open(filename, 'w+', newline='') as csvfile:
-        csvwriter = csv.writer(csvfile)
-        csvwriter.writerow(['λ', 'μ', 'p', 'n', 'snr', 'MSE'])  # Write the header row
 
-        param_list = [(λ, μ, p, n, snr, seed) 
-                        for μ in μ_array
-                        for λ in λ_array
-                        for n in n_array
-                        for p in p_array]
-
-        if parallel:
-            paralleled_compute(param_list, simulate_test_MSE_for_grid, csvwriter)
-        else:
-            for params in tqdm(param_list):
-                csvwriter.writerow([*params[:-1], simulate_test_MSE_for_grid(params)])
+@numba.njit(cache=True, fastmath=True, nogil=True)
+def paralleled_numba(param_list, simulate_test_MSE_for_grid, progress):
+    result_arr = np.zeros((len(param_list), 6))
+    typed_param_list = List()
     
+    # Filling the typed list (Numba will infer types)
+    for p in param_list:
+        typed_param_list.append(p)
+    
+    for idx in prange(len(typed_param_list)):
+        result_arr[idx, :-1] = np.array(typed_param_list[idx][:-1], dtype=np.float64)
+        result_arr[idx, -1] = simulate_test_MSE_for_grid(typed_param_list[idx])
+        progress.update(1)
+    return result_arr
+
+def parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr, seed=None, native_parallel=True, filename='results.csv'):
+    param_list = [(λ, μ, p, n, snr, seed) 
+                    for μ in μ_array
+                    for λ in λ_array
+                    for n in n_array
+                    for p in p_array]
+
+    if native_parallel:
+        with open(filename, 'w+', newline='') as csvfile:
+            csvwriter = csv.writer(csvfile)
+            csvwriter.writerow(['λ', 'μ', 'p', 'n', 'snr', 'MSE'])  # Write the header row
+            paralleled_compute(param_list, simulate_test_MSE_for_grid, csvwriter)
+    else:
+        with ProgressBar(total=len(param_list)) as progress:
+            result_arr = paralleled_numba(param_list, simulate_test_MSE_for_grid, progress)
+        df = pd.DataFrame(result_arr, columns=['λ', 'μ', 'p', 'n', 'snr', 'MSE'])
+        df.to_csv(filename, index=False)
     return None
 
 if __name__ == "__main__":
-    μ_array = np.linspace(1, 20, 50)
-    λ_array = np.linspace(1, 20, 50)
+    μ_array = np.linspace(1, 20, 40)
+    λ_array = np.linspace(1, 20, 40)
     γ = np.linspace(0.05, 5.05, 500)
     n_array = np.array([100])
     p_array = np.unique((γ * n_array).astype(int))
@@ -164,6 +186,6 @@ if __name__ == "__main__":
     print("date and time =", dt_string)
 
     parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr, seed=seed, 
-                                    parallel=False, filename=f'results/results_[{dt_string}-{seed}].csv')
+                                    native_parallel=False, filename=f'results/results_[{dt_string}-{seed}].csv')
     print(start_time - time.time())
     print('Finished Runing Simulations')
