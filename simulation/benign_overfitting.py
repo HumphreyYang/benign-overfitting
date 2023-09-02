@@ -1,16 +1,12 @@
 import numpy as np
-from scipy.stats import ortho_group
 from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
 import time
 import csv
 from datetime import datetime
+import pandas as pd
 import numba
 from numba import prange
-from scipy.stats import ortho_group
-import pandas as pd
-from numba.typed import Dict
-from numba import types
 from numba.typed import List
 from numba_progress import ProgressBar
 
@@ -110,7 +106,7 @@ def paralleled_compute(param_list, simulate_test_MSE_for_grid, csvwriter):
     if len(param_list) == 0:
         return
     
-    batch_size = 50  # Adjust based on available memory and the expected size of data
+    batch_size = 50
     results_buffer = []
     
     with ThreadPoolExecutor() as executor:
@@ -138,18 +134,14 @@ def paralleled_compute(param_list, simulate_test_MSE_for_grid, csvwriter):
             csvwriter.writerows(results_buffer)
 
 @numba.njit(cache=True, fastmath=True, nogil=True)
-def paralleled_numba(param_list, simulate_test_MSE_for_grid, progress):
-    result_arr = np.zeros((len(param_list), 6))
-    typed_param_list = List()
-    
-    # Filling the typed list (Numba will infer types)
-    for p in param_list:
-        typed_param_list.append(p)
+def paralleled_numba(typed_param_list, simulate_test_MSE_for_grid, progress):
+    result_arr = np.zeros((len(typed_param_list), 6))
     
     for idx in prange(len(typed_param_list)):
         result_arr[idx, :-1] = np.array(typed_param_list[idx][:-1], dtype=np.float64)
         result_arr[idx, -1] = simulate_test_MSE_for_grid(typed_param_list[idx])
         progress.update(1)
+
     return result_arr
 
 def parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr, seed=None, native_parallel=True, filename='results.csv'):
@@ -162,11 +154,14 @@ def parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr, s
     if native_parallel:
         with open(filename, 'w+', newline='') as csvfile:
             csvwriter = csv.writer(csvfile)
-            csvwriter.writerow(['λ', 'μ', 'p', 'n', 'snr', 'MSE'])  # Write the header row
+            csvwriter.writerow(['λ', 'μ', 'p', 'n', 'snr', 'MSE']) 
             paralleled_compute(param_list, simulate_test_MSE_for_grid, csvwriter)
     else:
+        typed_param_list = List()
+        for p in param_list:
+            typed_param_list.append(p)
         with ProgressBar(total=len(param_list)) as progress:
-            result_arr = paralleled_numba(param_list, simulate_test_MSE_for_grid, progress)
+            result_arr = paralleled_numba(typed_param_list, simulate_test_MSE_for_grid, progress)
         df = pd.DataFrame(result_arr, columns=['λ', 'μ', 'p', 'n', 'snr', 'MSE'])
         df.to_csv(filename, index=False)
     return None
@@ -178,7 +173,7 @@ if __name__ == "__main__":
     n_array = np.array([100])
     p_array = np.unique((γ * n_array).astype(int))
     snr = 5.0
-    seed = 1525 # current time
+    seed = 1525
 
     start_time = time.time()
     now = datetime.now()

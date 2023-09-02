@@ -38,7 +38,6 @@ parallel_run_simulations <- function(mu_array, lambda_array, n_array, p_array, s
     params <- param_list[idx,]
     mse_result <- simulate_test_MSE(params$lambda, params$mu, params$p, params$n, params$snr, params$seed)
     
-    # Create a data frame to hold current parameters and result
     temp_df <- data.frame(lambda=params$lambda, mu=params$mu, p=params$p, n=params$n, snr=params$snr, MSE=mse_result)
 
     return(temp_df)
@@ -47,7 +46,6 @@ parallel_run_simulations <- function(mu_array, lambda_array, n_array, p_array, s
   return(results)
 }
 
-# Define parameters (no changes here)
 time = Sys.time()
 date = Sys.Date()
 
@@ -59,7 +57,6 @@ p_array <- as.integer(gamma_array * n_array)
 snr <- 5
 seed <- 102
 
-# Run simulations and collect results into a data frame
 MSE_dataframe <- parallel_run_simulations(mu_array, lambda_array, n_array, p_array, snr, seed)
 
 end_time <- Sys.time()
