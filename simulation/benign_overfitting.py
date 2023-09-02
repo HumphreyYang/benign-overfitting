@@ -182,5 +182,5 @@ if __name__ == "__main__":
 
     parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr, seed=seed, 
                                     native_parallel=False, filename=f'results/results_[{dt_string}-{seed}].csv')
-    print(start_time - time.time())
+    print(time.time()-start_time)
     print('Finished Runing Simulations')

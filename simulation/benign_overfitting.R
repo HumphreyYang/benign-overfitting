@@ -49,13 +49,13 @@ parallel_run_simulations <- function(mu_array, lambda_array, n_array, p_array, s
 time = Sys.time()
 date = Sys.Date()
 
-mu_array <- seq(1, 20, length=10)
-lambda_array <- seq(1, 20, length=10)
-gamma_array <- seq(0.05, 5.5, length=500)
+mu_array <- seq(1, 20, length=40)
+lambda_array <- seq(1, 20, length=40)
+gamma_array <- seq(0.05, 5.05, length=500)
 n_array <- c(100)
 p_array <- as.integer(gamma_array * n_array)
 snr <- 5
-seed <- 102
+seed <- 105
 
 MSE_dataframe <- parallel_run_simulations(mu_array, lambda_array, n_array, p_array, snr, seed)
 
