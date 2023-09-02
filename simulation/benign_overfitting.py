@@ -8,25 +8,25 @@ from datetime import datetime
 import numba
 from scipy.stats import ortho_group
 
-@numba.njit(cache=True, fastmath=True)
+@numba.njit(cache=True, fastmath=True, nogil=True)
 def solve_β_hat(X, Y):
     XTX = X.T @ X
     β_hat = np.linalg.pinv(XTX) @ X.T @ Y
     return β_hat
 
-@numba.njit(cache=True, fastmath=True, parallel=True)
+@numba.njit(cache=True, fastmath=True, parallel=True, nogil=True)
 def calculate_MSE(β_hat, X, Y):
     pred_diff = Y - X @ β_hat
     return np.sum(pred_diff ** 2) / len(Y)
 
-@numba.njit(cache=True, fastmath=True)
+@numba.njit(cache=True, fastmath=True, nogil=True)
 def compute_Y(X, β, σ, seed=None):
     if seed is not None:
         np.random.seed(seed)
     ε = np.random.normal(0, σ, len(X))
     return X @ β + ε
 
-@numba.njit(cache=True, fastmath=True)
+@numba.njit(cache=True, fastmath=True, nogil=True)
 def compute_X(λ, μ, p, n, U, V, seed=None):
     Λ = np.diag(np.concatenate((np.array([λ]), np.ones(p-1))))
     C = (U @ Λ) @ U.T
@@ -39,7 +39,7 @@ def compute_X(λ, μ, p, n, U, V, seed=None):
     Z = np.random.normal(0, 1, (n, p))
     return Γ @ (Z @ C)
 
-@numba.njit(cache=True, fastmath=True, parallel=True)
+@numba.njit(cache=True, fastmath=True, parallel=True, nogil=True)
 def scale_norm(X, out_norm):
     if np.linalg.norm(X) == 0:
         return X
@@ -47,15 +47,15 @@ def scale_norm(X, out_norm):
     X_normalized = (out_norm / norm_X) * X
     return X_normalized
 
-@numba.njit(cache=True, fastmath=True)
+@numba.njit(cache=True, fastmath=True, nogil=True)
 def generate_orthonormal_matrix(dim, seed=None):
     if seed is not None:
         np.random.seed(seed)
-    a = np.random.uniform(0.5, 1, size=(dim, dim))
+    a = np.random.randn(dim, dim)
     res, _ = np.linalg.qr(a)
     return np.ascontiguousarray(res)
 
-@numba.njit(cache=True, fastmath=True)
+@numba.njit(cache=True, fastmath=True, nogil=True)
 def simulate_test_MSE(λ, μ, p, n, snr, seed=None):
     if seed is not None:
         U = generate_orthonormal_matrix(p, seed=seed+1)
