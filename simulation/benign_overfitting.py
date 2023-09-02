@@ -72,7 +72,7 @@ def scale_norm(X, out_norm):
 def generate_orthonormal_matrix(dim, seed=None):
     if seed is not None:
             np.random.seed(seed)
-    a = np.random.random(size=(dim, dim))
+    a = np.random.randn(size=(dim, dim))
     res, _ = np.linalg.qr(a)
     assert check_orthonormal(res)
     return np.ascontiguousarray(res)
@@ -146,7 +146,7 @@ def parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr, s
                     params = params_future[0]
                     future = params_future[1]
                     try:
-                        csvwriter.writerow([*params, future.result()])
+                        csvwriter.writerow([*params[:-1], future.result()])
                     except Exception as e:
                         print(e)
         else:
