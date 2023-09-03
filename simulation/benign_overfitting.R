@@ -45,6 +45,7 @@ parallel_run_simulations <- function(mu_array, lambda_array, n_array, p_array, s
 
 parallel_run_simulations_in_chunks <- function(mu_array, lambda_array, n_array, p_array, snr, seed, chunk_size, output_file) {
   start_time = Sys.time()
+  cat('Starting Run')
   cl <- makeCluster(detectCores(), outfile='')
   registerDoParallel(cl)
   source('simulation/toolkits.R')
@@ -88,7 +89,7 @@ lambda_array <- seq(1, 20, length=40)
 gamma_array <- seq(0.05, 5.05, length=500)
 n_array <- c(100)
 p_array <- as.integer(gamma_array * n_array)
-snr <- 5
+snr <- 1
 seed <- 105
 chunk_size <- 80000
 
