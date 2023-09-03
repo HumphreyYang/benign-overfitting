@@ -172,7 +172,7 @@ if __name__ == "__main__":
     γ = np.linspace(0.05, 5.05, 500)
     n_array = np.array([100])
     p_array = np.unique((γ * n_array).astype(int))
-    snr = 5.0
+    snr = 1.0
     seed = 1525
 
     start_time = time.time()

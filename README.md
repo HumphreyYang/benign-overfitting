@@ -16,7 +16,7 @@ To see the plots interactively, please run the `plot.ipynb` in `visualization` f
 
 ### Simulation Code
 
-Simulations are written in R and Python. The Python version uses Just-In-Time Compilor to speed up the simulation. The R version, although uses paralleled programming, is much slower than the Python version. Both code are in the folder `simulation`.
+Simulations are written in R and Python. The Python version uses Just-In-Time Compilor to speed up the simulation. The R version is also available. Both code are in the folder `simulation`.
 
 To run the simulation, change the parameter in the code and run
 
