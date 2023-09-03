@@ -3,7 +3,6 @@ library(doParallel)
 library(foreach)
 library(MASS)
 
-# Auxiliary Functions
 check_orthonormal <- function(A) {
   n <- nrow(A)
   col_norms <- sqrt(rowSums(A^2))

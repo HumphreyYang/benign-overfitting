@@ -16,7 +16,7 @@ To see the plots interactively, please run the `plot.ipynb` in `visualization` f
 
 ### Simulation Code
 
-Simulations are written in R and Python. The Python version uses Just-In-Time Compilor to speed up the simulation. The R version, although uses paralleled programming, is much slower than the Python version. Both code are in the folder `simulation`.
+Simulations are written in R and Python. The Python version uses Just-In-Time Compilor to speed up the simulation. The R version is also available. Both code are in the folder `simulation`.
 
 To run the simulation, change the parameter in the code and run
 
@@ -32,7 +32,7 @@ conda install -c numba icc_rt
 
 (Read more here about [SVML](https://numba.pydata.org/numba-doc/latest/user/performance-tips.html#intel-svml))
 
-R version is also available but it was 15 times slower than the JIT Python version. To run the R version, run
+R version is also available but it was 10 times slower than the JIT Numba version (machine: i7 13700H + 32GB). To run the R version, run
 
 ```bash
 Rscript simulation/benign_overfitting.R
