@@ -32,7 +32,7 @@ conda install -c numba icc_rt
 
 (Read more here about [SVML](https://numba.pydata.org/numba-doc/latest/user/performance-tips.html#intel-svml))
 
-R version is also available but it was 10 times slower than the JIT Numba version (machine: i7 13700H + 32GB). To run the R version, run
+Paralleld R version is also available. To run the R version, run
 
 ```bash
 Rscript simulation/benign_overfitting.R
