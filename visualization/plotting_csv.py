@@ -6,6 +6,7 @@ from IPython.display import display
 from mpl_toolkits.mplot3d import Axes3D
 from ipywidgets import interactive, widgets
 import pandas as pd
+import matplotlib as mpl
 
 def interative_param_vs_mse(df, fixed_μ, fixed_λ, fixed_γ):
     fig, axs = plt.subplots(3, 1, figsize=(10, 10))
@@ -23,16 +24,40 @@ def plot_param_vs_mse(data, param_to_vary, fixed_params, ax=None):
     
     filter_conditions = np.all([data[param] == nearest_value for param, nearest_value in nearest_fixed_params.items()], axis=0)
     filtered_data = data[filter_conditions]
+    filtered_data.sort_values(by=[param_to_vary], inplace=True)
 
-    print(len(filtered_data))
-
-    xs, ys = zip(*sorted(zip(filtered_data[param_to_vary], filtered_data['MSE'])))
-
-    ax.plot(xs, ys, marker='o')
+    ax.plot(filtered_data[param_to_vary], filtered_data['MSE'], marker='o')
     ax.set_xlabel(param_to_vary)
     ax.set_ylabel('MSE')
     ax.set_title(f'{param_to_vary} vs MSE (Nearest Fixed Params: {list(fixed_params.items())}')
     ax.grid(True)
+    return ax
+
+def plot_param_mean_mse(data, param, group_param, group_param_range=None, ax=None):
+    if ax is None:
+        fig, ax = plt.subplots(figsize=(10, 12))
+    
+    snr = data['snr'].unique()[0]
+    # Filtering data based on group_param_range if provided
+    if group_param_range is not None:
+        data = data.loc[data[group_param].isin(group_param_range)]
+
+    data = data.copy()
+
+    data.sort_values(by=[param, group_param], inplace=True)
+    data = data[[param, group_param, 'MSE']].groupby([param, group_param]).mean().reset_index()
+    
+    scatter = ax.scatter(data[param], data['MSE'], c=data[group_param], cmap='plasma',  alpha=0.1)
+
+    # Adding color bar legend
+    color_bar = plt.colorbar(scatter, ax=ax)
+    color_bar.set_label(group_param)
+
+    # Setting labels and title
+    ax.set_xlabel(param)
+    ax.set_ylabel('MSE')
+    ax.set_title(f'{param} against average MSE with {group_param} as levels (SNR={snr})')
+
     return ax
 
 def interative_bars_line(df):
@@ -69,15 +94,6 @@ def find_nearest_value(array, value):
 from scipy.interpolate import griddata
 
 def plot_surface_MSE(data, x_param, y_param, fixed_params, fixed_params_values, z_param='MSE'):
-    """
-    Generate a surface plot for MSE against varying parameters, given fixed values for other parameters.
-    
-    Parameters:
-    - data: DataFrame containing the data
-    - x_param, y_param: Parameters for the x and y axis
-    - z_param: Parameter for the z axis, default is 'MSE'
-    - fixed_params: Dictionary of fixed parameter values
-    """
     # Find the nearest available values in the dataset for the fixed parameters
     nearest_fixed_params = {fixed_params: find_nearest_value(data[fixed_params].unique(), fixed_params_values)}
     
