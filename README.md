@@ -2,6 +2,20 @@
 
 This repo contains simulation files for the project **Benign Overfitting in Linear Regression with Separable Variance–Covariance**.
 
+## Environment Setup
+
+To set up the environment, run
+
+```bash
+conda create -n bo python==3.10
+```
+
+and install the packages in `requirements.txt` using
+
+```bash
+pip install -r requirements.txt
+```
+
 ## File Structure
 
 ### Simulation Results
