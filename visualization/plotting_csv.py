@@ -26,7 +26,9 @@ def plot_param_vs_mse(data, param_to_vary, fixed_params, ax=None):
 
     print(len(filtered_data))
 
-    ax.plot(filtered_data[param_to_vary], filtered_data['MSE'], marker='o')
+    xs, ys = zip(*sorted(zip(filtered_data[param_to_vary], filtered_data['MSE'])))
+
+    ax.plot(xs, ys, marker='o')
     ax.set_xlabel(param_to_vary)
     ax.set_ylabel('MSE')
     ax.set_title(f'{param_to_vary} vs MSE (Nearest Fixed Params: {list(fixed_params.items())}')
