@@ -49,14 +49,14 @@ simulate_test_MSE <- function(lambda, mu, p, n, snr, seed = NULL) {
   stopifnot(check_orthonormal(U), check_orthonormal(V))
 
   if (!is.null(seed)) set.seed(seed)
-  X <- t(compute_X(lambda, mu, p, n, U, V, seed))
+  X <- t(compute_X(lambda, mu, p, n, U, V, seed+3))
   train_size <- as.integer(0.7 * n)
   X_train <- X[1:train_size, ]
   X_test <- X[(train_size + 1):n, ]
   
   beta <- scale_norm(matrix(rep(1, p), p, 1), snr)
   sigma <- 1.0
-  Y <- compute_Y(X, beta, sigma, seed)
+  Y <- compute_Y(X, beta, sigma, seed+4)
   Y_train <- Y[1:train_size]
   Y_test <- Y[(train_size + 1):n]
   

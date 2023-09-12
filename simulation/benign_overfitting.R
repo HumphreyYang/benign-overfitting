@@ -1,24 +1,5 @@
-library(doParallel)
 library(pracma)
-
-# for_run_simulation <- function(mu_array, lambda_array, n_array, p_array, snr, seed) {
-#   source('simulation/toolkits.R')
-#   functions_to_export <- c('simulate_test_MSE', 'solve_beta_hat', 'calculate_MSE', 
-#                            'compute_Y', 'compute_X', 'scale_norm', 'check_orthonormal')
-#   param_list <- expand.grid(lambda=lambda_array, mu=mu_array, p=p_array, n=n_array, snr=snr, seed=seed)
-#   iterations <- nrow(param_list)
-
-#   progress_print <- function(idx, iterations) cat(paste0(idx/iterations, "/1 \n"))
-
-#   results_df <- data.frame()
-#   for (idx in 1:iterations){
-#     progress_print(idx, iterations)
-#     params <- param_list[idx,]
-#     mse_result <- simulate_test_MSE(params$lambda, params$mu, params$p, params$n, params$snr, params$seed)
-    
-#     # Create a data frame to hold current parameters and result
-#     temp_df <- data.frame(lambda=params$lambda, mu=params$mu, p=params$p, n=params$n, snr=params$snr, MSE=mse_result)}
-# }
+library(snow)
 
 parallel_run_simulations <- function(mu_array, lambda_array, n_array, p_array, snr, seed) {
   cl <- makeCluster(detectCores(), outfile='')
@@ -94,7 +75,7 @@ seed <- 1023
 chunk_size <- 80000
 
 MSE_dataframe <- parallel_run_simulations_in_chunks(mu_array, lambda_array, n_array, p_array, 
-                          snr_array, seed, chunk_size, output_file=paste0('results/results[', time, ']', '-', seed, '.csv'))
+                          snr_array, seed, chunk_size, output_file=paste0('results/R/results[', time, ']', '-', seed, '.csv'))
 end_time <- Sys.time()
 cat('time_taken', end_time - time)
 
