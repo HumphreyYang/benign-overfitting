@@ -144,12 +144,13 @@ def paralleled_numba(typed_param_list, simulate_test_MSE_for_grid, progress):
 
     return result_arr
 
-def parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr, seed=None, native_parallel=True, filename='results.csv'):
+def parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr_array, seed=None, native_parallel=True, filename='results.csv'):
     param_list = [(λ, μ, p, n, snr, seed) 
                     for μ in μ_array
                     for λ in λ_array
                     for n in n_array
-                    for p in p_array]
+                    for p in p_array
+                    for snr in snr_array]
 
     if native_parallel:
         with open(filename, 'w+', newline='') as csvfile:
@@ -167,20 +168,21 @@ def parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr, s
     return None
 
 if __name__ == "__main__":
-    μ_array = np.linspace(1, 20, 40)
-    λ_array = np.linspace(1, 20, 40)
-    γ = np.linspace(0.05, 5.05, 500)
-    n_array = np.array([100])
+    μ_array = np.linspace(1, 100, 8)
+    λ_array = np.array([1])
+    γ = np.linspace(0.1, 10, 100)
+    n_array = np.array([200])
     p_array = np.unique((γ * n_array).astype(int))
-    snr = 1.0
-    seed = 1525
+    snr_array = np.linspace(1, 5, 4)
+    print(snr_array)
+    seed = 1001
 
     start_time = time.time()
     now = datetime.now()
     dt_string = now.strftime("%d-%m-%Y_%H:%M:%S")
     print("date and time =", dt_string)
 
-    parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr, seed=seed, 
+    parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr_array, seed=seed, 
                                     native_parallel=False, filename=f'results/results_[{dt_string}-{seed}].csv')
     print(time.time()-start_time)
     print('Finished Runing Simulations')

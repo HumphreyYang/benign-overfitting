@@ -43,7 +43,7 @@ parallel_run_simulations <- function(mu_array, lambda_array, n_array, p_array, s
   return(results)
 }
 
-parallel_run_simulations_in_chunks <- function(mu_array, lambda_array, n_array, p_array, snr, seed, chunk_size, output_file) {
+parallel_run_simulations_in_chunks <- function(mu_array, lambda_array, n_array, p_array, snr_array, seed, chunk_size, output_file) {
   start_time = Sys.time()
   cat('Starting Run')
   cl <- makeCluster(detectCores(), outfile='')
@@ -52,7 +52,7 @@ parallel_run_simulations_in_chunks <- function(mu_array, lambda_array, n_array, 
   functions_to_export <- c('simulate_test_MSE', 'solve_beta_hat', 'calculate_MSE', 
                            'compute_Y', 'compute_X', 'scale_norm', 'check_orthonormal')
   clusterExport(cl, functions_to_export)
-  param_list <- expand.grid(lambda=lambda_array, mu=mu_array, p=p_array, n=n_array, snr=snr, seed=seed)
+  param_list <- expand.grid(lambda=lambda_array, mu=mu_array, p=p_array, n=n_array, snr=snr_array, seed=seed)
   param_list <- param_list[sample(nrow(param_list)),]
   iterations <- nrow(param_list)
   
@@ -84,17 +84,17 @@ parallel_run_simulations_in_chunks <- function(mu_array, lambda_array, n_array, 
 time = Sys.time()
 date = Sys.Date()
 
-mu_array <- seq(1, 20, length=40)
-lambda_array <- seq(1, 20, length=40)
-gamma_array <- seq(0.05, 5.05, length=500)
-n_array <- c(100)
+mu_array <- seq(1, 100, length=8)
+lambda_array <- c(1)
+gamma_array <- seq(0.1, 10, length=100)
+n_array <- c(200)
 p_array <- as.integer(gamma_array * n_array)
-snr <- 1
-seed <- 105
+snr_array <- seq(1, 5, length=4)
+seed <- 1023
 chunk_size <- 80000
 
 MSE_dataframe <- parallel_run_simulations_in_chunks(mu_array, lambda_array, n_array, p_array, 
-                          snr, seed, chunk_size, output_file=paste0('results/results[', time, ']', '-', seed, '.csv'))
+                          snr_array, seed, chunk_size, output_file=paste0('results/results[', time, ']', '-', seed, '.csv'))
 end_time <- Sys.time()
 cat('time_taken', end_time - time)
 
