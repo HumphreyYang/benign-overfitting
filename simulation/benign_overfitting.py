@@ -42,12 +42,12 @@ def compute_X(λ, μ, p, n, U, V, seed=None):
     return Γ @ (Z @ C)
 
 @numba.njit(cache=True, fastmath=True, parallel=True, nogil=True)
-def scale_norm(X, out_norm):
-    if np.linalg.norm(X) == 0:
-        return X
-    norm_X = np.linalg.norm(X)
-    X_normalized = (out_norm / norm_X) * X
-    return X_normalized
+def scale_norm(β, snr):
+    if np.linalg.norm(β) == 0:
+        return β
+    norm_X = np.linalg.norm(β)**2
+    β_normalized = np.sqrt((snr / norm_X)) * β
+    return β_normalized
 
 @numba.njit(cache=True, fastmath=True, nogil=True)
 def generate_orthonormal_matrix(dim, seed=None):

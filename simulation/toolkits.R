@@ -36,8 +36,8 @@ compute_X <- function(lambda, mu, p, n, U, V, seed = NULL) {
 }
 
 scale_norm <- function(X, out_norm) {
-  norm_X <- norm(X, 'F')
-  return((out_norm / norm_X) * X)
+  norm_X <- norm(X, 'F')**2
+  return(sqrt(out_norm / norm_X) * X)
 }
 
 # Main Function
