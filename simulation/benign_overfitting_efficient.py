@@ -12,20 +12,39 @@ from numba_progress import ProgressBar
 
 @numba.njit(cache=True, fastmath=True, nogil=True)
 def solve_β_hat(X, Y):
+    """
+    Solves the least squares problem using the Moore-Penrose pseudoinverse.
+
+    β_hat = (X^T X)^{+} X^T Y    
+
+    """
     XTX = X.T @ X
     β_hat = np.linalg.pinv(XTX) @ X.T @ Y
     return β_hat
 
 def calculate_MSE(β_hat, X, Y):
+    """
+    Calculates the mean squared error of the prediction.
+
+    MSE = \frac{1}{n} \sum_{i=1}^{n} (y_i - \hat{y}_i)^2
+    """
     pred_diff = Y - (X @ β_hat)
     return np.sum(pred_diff ** 2) / X.shape[0]
 
 @numba.njit(cache=True, fastmath=True, nogil=True)
 def compute_Y(X, β, ε):
+    """
+    Computes the response variable Y.
+
+    Y = X β + ε
+    """
     return X @ β + ε
 
 @numba.njit(cache=True, fastmath=True, parallel=True, nogil=True)
 def scale_norm(β, snr):
+    """
+    Scale β to have a given squared l2 norm.
+    """
     if np.linalg.norm(β) == 0:
         return β
     norm_X = np.linalg.norm(β)**2
@@ -34,6 +53,10 @@ def scale_norm(β, snr):
 
 @numba.njit(cache=True, fastmath=True, nogil=True)
 def generate_orthonormal_matrix(dim, seed=None):
+    """
+    Generate random orthonormal matrix of size dim x dim.
+    """
+        
     np.random.seed(seed)
     a = np.random.randn(dim, dim)
     res, _ = np.linalg.qr(a)
@@ -41,6 +64,14 @@ def generate_orthonormal_matrix(dim, seed=None):
 
 @numba.njit(cache=True, fastmath=True, nogil=True)
 def compute_X(λ, μ, n, p, seed=None):
+    """
+    Generate X = Γ Z C, where Z is a n x p matrix of iid standard normal 
+    random variables;
+    
+    Γ is a n x n matrix with eigenvalues (μ, 1, ..., 1);
+    
+    C is a p x p matrix with eigenvalues (λ, 1, ..., 1).
+    """
 
     U = generate_orthonormal_matrix(p, seed=seed)
     V = generate_orthonormal_matrix(n, seed=seed)
@@ -56,9 +87,32 @@ def compute_X(λ, μ, n, p, seed=None):
 
 @numba.njit(cache=True, fastmath=True, nogil=True)
 def compute_ε(σ, n, seed=None):
+    """
+    Generate ε = N(0, σ^2 I_n).
+    """
+
     np.random.seed(seed)
     return np.random.normal(0, σ, n)
 
+def simulate_risks(X, ε, params):
+    """
+    Fit the LS model and calculate the test MSE and null risk.
+    """
+    λ, μ, p, n, snr = params
+    X_p = np.ascontiguousarray(X[:, :p])
+    β = scale_norm(np.ones(p), snr)
+    print(np.linalg.norm(β)**2)
+    Y = compute_Y(X_p, β, ε)
+    null_risk =  np.sum(Y - np.mean(Y))**2 / len(Y)
+    X_train = X_p[:n,:]
+    X_test = X_p[n:, :]
+    Y_train = Y[:n]
+    Y_test = Y[n:]
+    β_hat = solve_β_hat(X_train, Y_train)
+    test_MSE = calculate_MSE(β_hat, X_test, Y_test)
+    return np.array([λ, μ, p, n, snr, test_MSE, null_risk], 
+                                dtype=np.float64)
+    
 def efficient_simulation(μ_array, λ_array, n_array, p_array, snr_array, σ, 
                          result_arr, progress, seed=None):
     if seed is None:
@@ -66,46 +120,29 @@ def efficient_simulation(μ_array, λ_array, n_array, p_array, snr_array, σ,
     idx = 0
     n = max(n_array)
     max_p = max(p_array)
-    test_n = 1000
+    test_n = 10000
     ε = compute_ε(σ, n+test_n, seed+1) 
     for λ in λ_array:
         for μ in μ_array:
             X = compute_X(λ, μ, n+test_n, max_p, seed)
             for snr in snr_array:
                 for p in p_array:
-                    X_p = np.ascontiguousarray(X[:, :p])
-                    β = scale_norm(np.ones(p), snr)
-                    print(np.linalg.norm(β)**2)
-                    Y = compute_Y(X_p, β, ε)
-                    X_train = X_p[:n,:]
-                    X_test = X_p[n:, :]
-                    Y_train = Y[:n]
-                    Y_test = Y[n:]
-                    null_risk = calculate_MSE(np.zeros(max_p), X, Y)
-                    β_hat = solve_β_hat(X_train, Y_train)
-                    test_MSE = calculate_MSE(β_hat, X_test, Y_test)
-                    result_arr[idx] = np.array([λ, μ, p, n, snr, test_MSE, null_risk], 
-                                                dtype=np.float64)
+                    params = λ, μ, p, n, snr
+                    result_arr[idx] = simulate_risks(X, ε, params)
                     idx += 1
                     progress.update(1)
     return result_arr
 
-
-# Corrected function to generate symlog spaced points focusing on non-negative side
 def generate_symlog_points(n1, n2, L, U, a):
-    # Generate points for the logarithmic part from [L, a)
+
     log_part_lower = np.logspace(np.log10(L), np.log10(a-0.001), n1, endpoint=False)
-    
-    # Generate points for the logarithmic part from (a, U]
     log_part_upper = np.logspace(np.log10(a+0.001), np.log10(U), n2, endpoint=True)
-    
-    # Concatenate all three parts
     symlog_points = np.concatenate([log_part_lower, log_part_upper])
     
     return symlog_points
 
 if __name__ == "__main__":
-    μ_array = np.linspace(1, 100, 8)
+    μ_array = np.array([1, 100, 200, 500])
     λ_array = np.array([1])
     n1, n2 = 30, 30
     γ = generate_symlog_points(n1, n2, 0.1, 10, 1)

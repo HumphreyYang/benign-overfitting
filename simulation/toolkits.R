@@ -41,7 +41,7 @@ scale_norm <- function(X, out_norm) {
 }
 
 # Main Function
-simulate_test_MSE <- function(lambda, mu, p, n, snr, seed = NULL) {
+simulate_test_MSE <- function(lambda, mu, p, n, snr, test_size, seed = NULL) {
   if (!is.null(seed)) set.seed(seed+1)
   U <- randortho(p, type = 'orthonormal')
   if (!is.null(seed)) set.seed(seed+2)
@@ -50,13 +50,13 @@ simulate_test_MSE <- function(lambda, mu, p, n, snr, seed = NULL) {
 
   if (!is.null(seed)) set.seed(seed)
   X <- t(compute_X(lambda, mu, p, n, U, V, seed))
-  train_size <- as.integer(0.7 * n)
   X_train <- X[1:train_size, ]
-  X_test <- X[(train_size + 1):n, ]
+  X_test <- X[(train_size + test_size):n, ]
   
   beta <- scale_norm(matrix(rep(1, p), p, 1), snr)
   sigma <- 1.0
   Y <- compute_Y(X, beta, sigma, seed)
+  null_risk <- (Y - mean(Y))^2 / length(Y)
   Y_train <- Y[1:train_size]
   Y_test <- Y[(train_size + 1):n]
   

@@ -58,7 +58,7 @@ def generate_orthonormal_matrix(dim, seed=None):
     return np.ascontiguousarray(res)
 
 @numba.njit(cache=True, fastmath=True, nogil=True)
-def simulate_test_MSE(λ, μ, p, n, snr, seed=None):
+def simulate_test_MSE(λ, μ, p, n, snr, test_n, seed=None):
     if seed is not None:
         U = generate_orthonormal_matrix(p, seed=seed+1)
         V = generate_orthonormal_matrix(n*10, seed=seed+2)
@@ -76,11 +76,10 @@ def simulate_test_MSE(λ, μ, p, n, snr, seed=None):
     σ = 1.0
     
     Y = compute_Y(X, β, σ)
+    null_risk =  np.sum(Y - np.mean(Y) ** 2) / len(Y)
     Y_train, Y_test = np.split(Y, [n])
 
     β_hat = solve_β_hat(X_train, Y_train)
-
-    print(f'null risk:', calculate_MSE(np.zeros(p), X, Y))
 
     # print('*' * 80)
     # print(f'summary of parameters: λ={λ}, μ={μ}, p={p}, n={n}')
@@ -90,7 +89,7 @@ def simulate_test_MSE(λ, μ, p, n, snr, seed=None):
     # print(f'time taken = {time.time() - start_time} seconds')
     # print('*' * 80)
 
-    return calculate_MSE(β_hat, X_test, Y_test)
+    return calculate_MSE(β_hat, X_test, Y_test), null_risk
 
 def vectorized_run_simulations(μ_array, λ_array, n_array, p_array):
     μ_grid, λ_grid, n_grid, p_grid = np.meshgrid(μ_array, λ_array, n_array, p_array, indexing='ij')
@@ -99,8 +98,8 @@ def vectorized_run_simulations(μ_array, λ_array, n_array, p_array):
 
 @numba.njit(cache=True, fastmath=True, nogil=True)
 def simulate_test_MSE_for_grid(params):
-    λ, μ, p, n, snr, seed = params
-    simulation_result = simulate_test_MSE(λ, μ, p, n, snr, seed=seed)
+    λ, μ, p, n, snr, test_n, seed = params
+    simulation_result = simulate_test_MSE(λ, μ, p, n, snr, test_n, seed=seed)
     return simulation_result
 
 def paralleled_compute(param_list, simulate_test_MSE_for_grid, csvwriter):
@@ -134,19 +133,18 @@ def paralleled_compute(param_list, simulate_test_MSE_for_grid, csvwriter):
         if results_buffer:
             csvwriter.writerows(results_buffer)
 
-@numba.njit(cache=True, fastmath=True, nogil=True)
-def paralleled_numba(typed_param_list, simulate_test_MSE_for_grid, progress):
-    result_arr = np.zeros((len(typed_param_list), 6))
+def paralleled_numba(typed_param_list, func, progress):
+    result_arr = np.zeros((len(typed_param_list), 7))
     
     for idx in prange(len(typed_param_list)):
-        result_arr[idx, :-1] = np.array(typed_param_list[idx][:-1], dtype=np.float64)
-        result_arr[idx, -1] = simulate_test_MSE_for_grid(typed_param_list[idx])
+        result_arr[idx, :-2] = np.array(typed_param_list[idx][:-2], dtype=np.float64)
+        result_arr[idx, -2:] = func(typed_param_list[idx])
         progress.update(1)
 
     return result_arr
 
-def parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr_array, seed=None, native_parallel=True, filename='results.csv'):
-    param_list = [(λ, μ, p, n, snr, seed) 
+def parallel_run_simulations(μ_array, λ_array, n_array, p_array, snr_array, test_n, seed=None, native_parallel=True, filename='results.csv'):
+    param_list = [(λ, μ, p, n, snr, test_n, seed) 
                     for μ in μ_array
                     for λ in λ_array
                     for n in n_array
@@ -156,7 +154,7 @@ def parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr_ar
     if native_parallel:
         with open(filename, 'w+', newline='') as csvfile:
             csvwriter = csv.writer(csvfile)
-            csvwriter.writerow(['λ', 'μ', 'p', 'n', 'snr', 'MSE']) 
+            csvwriter.writerow(['λ', 'μ', 'p', 'n', 'snr', 'MSE', 'null_risk']) 
             paralleled_compute(param_list, simulate_test_MSE_for_grid, csvwriter)
     else:
         typed_param_list = List()
@@ -164,7 +162,7 @@ def parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr_ar
             typed_param_list.append(p)
         with ProgressBar(total=len(param_list)) as progress:
             result_arr = paralleled_numba(typed_param_list, simulate_test_MSE_for_grid, progress)
-        df = pd.DataFrame(result_arr, columns=['λ', 'μ', 'p', 'n', 'snr', 'MSE'])
+        df = pd.DataFrame(result_arr, columns=['λ', 'μ', 'p', 'n', 'snr', 'MSE', 'null_risk'])
         df.to_csv(filename, index=False)
     return None
 
@@ -180,13 +178,14 @@ if __name__ == "__main__":
     σ = 1.0
     print(snr_array)
     seed = 2355
+    test_n = 10000
 
     start_time = time.time()
     now = datetime.now()
     dt_string = now.strftime("%d-%m-%Y_%H:%M:%S")
     print("date and time =", dt_string)
 
-    parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr_array, seed=seed, 
+    parallel_run_simulations(μ_array, λ_array, n_array, p_array, snr_array, test_n, seed=seed, 
                                     native_parallel=False, filename=f'results/Python/results_[{dt_string}-{seed}].csv')
     print(time.time()-start_time)
     print('Finished Runing Simulations')
