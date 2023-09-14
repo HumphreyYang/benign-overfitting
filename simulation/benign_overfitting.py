@@ -42,12 +42,12 @@ def compute_X(λ, μ, p, n, U, V, seed=None):
     return Γ @ (Z @ C)
 
 @numba.njit(cache=True, fastmath=True, parallel=True, nogil=True)
-def scale_norm(X, out_norm):
-    if np.linalg.norm(X) == 0:
-        return X
-    norm_X = np.linalg.norm(X)
-    X_normalized = (out_norm / norm_X) * X
-    return X_normalized
+def scale_norm(β, snr):
+    if np.linalg.norm(β) == 0:
+        return β
+    norm_X = np.linalg.norm(β)**2
+    β_normalized = np.sqrt((snr / norm_X)) * β
+    return β_normalized
 
 @numba.njit(cache=True, fastmath=True, nogil=True)
 def generate_orthonormal_matrix(dim, seed=None):
@@ -61,15 +61,14 @@ def generate_orthonormal_matrix(dim, seed=None):
 def simulate_test_MSE(λ, μ, p, n, snr, seed=None):
     if seed is not None:
         U = generate_orthonormal_matrix(p, seed=seed+1)
-        V = generate_orthonormal_matrix(n, seed=seed+2)
+        V = generate_orthonormal_matrix(n*10, seed=seed+2)
     else:
         U = generate_orthonormal_matrix(p)
-        V = generate_orthonormal_matrix(n)
+        V = generate_orthonormal_matrix(n*10)
     
-    X = compute_X(λ, μ, p, n, U, V, seed)
+    X = compute_X(λ, μ, p, n*10, U, V, seed)
     
-    train_size = int(0.7 * n)
-    X_train, X_test = np.split(X, [train_size])
+    X_train, X_test = np.split(X, [n])
     X_train = np.ascontiguousarray(X_train)
     X_test = np.ascontiguousarray(X_test)
 
@@ -77,9 +76,11 @@ def simulate_test_MSE(λ, μ, p, n, snr, seed=None):
     σ = 1.0
     
     Y = compute_Y(X, β, σ)
-    Y_train, Y_test = np.split(Y, [train_size])
+    Y_train, Y_test = np.split(Y, [n])
 
     β_hat = solve_β_hat(X_train, Y_train)
+
+    print(f'null risk:', calculate_MSE(np.zeros(p), X, Y))
 
     # print('*' * 80)
     # print(f'summary of parameters: λ={λ}, μ={μ}, p={p}, n={n}')
@@ -168,14 +169,17 @@ def parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr_ar
     return None
 
 if __name__ == "__main__":
-    μ_array = np.linspace(1, 100, 8)
+    μ_array = np.array([1])
     λ_array = np.array([1])
-    γ = np.linspace(0.1, 10, 100)
+    γ = [*np.linspace(0.1, 0.9, 25), *np.linspace(1.1, 10, 25)]
+    print(γ)
     n_array = np.array([200])
     p_array = np.unique((γ * n_array).astype(int))
-    snr_array = np.linspace(1, 5, 4)
+    print(p_array)
+    snr_array = np.array([5])
+    σ = 1.0
     print(snr_array)
-    seed = 1001
+    seed = 2355
 
     start_time = time.time()
     now = datetime.now()
@@ -183,6 +187,6 @@ if __name__ == "__main__":
     print("date and time =", dt_string)
 
     parallel_run_simulations_to_csv(μ_array, λ_array, n_array, p_array, snr_array, seed=seed, 
-                                    native_parallel=False, filename=f'results/results_[{dt_string}-{seed}].csv')
+                                    native_parallel=False, filename=f'results/Python/results_[{dt_string}-{seed}].csv')
     print(time.time()-start_time)
     print('Finished Runing Simulations')
