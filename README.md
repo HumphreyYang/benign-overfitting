@@ -1,6 +1,6 @@
-# Benign Overfitting in Linear Regression with Separable Variance–Covariance
+# Benign Overfitting in Linear Regression with Separable Variance–Covariance Structure
 
-This repo contains simulation files for the project **Benign Overfitting in Linear Regression with Separable Variance–Covariance**.
+This repository contains **draft** simulation files for the project **Benign Overfitting in Linear Regression with Separable Variance–Covariance**.
 
 ## Environment Setup
 
@@ -20,17 +20,17 @@ pip install -r requirements.txt
 
 ### Simulation Results
 
-The simulation results are in the folder `results`. For large simulation records with size over 100MB, we include a zip file for the results. To unzip the file, run
+The simulation results are in the folder `results`. For large simulation records with a size over 100MB, we include a zip file for the results. To unzip the file, run
 
-### Interative Plots
+### Interactive Plots
 
 To see the plots interactively, please run the `plot.ipynb` in `visualization` folder using `jupyter notebook` or `jupyter lab`. 
 
-[Jupyter Widgets](https://ipywidgets.readthedocs.io/en/7.x/user_install.html) need to be activated in the jupyter lab environment.
+[Jupyter Widgets](https://ipywidgets.readthedocs.io/en/7.x/user_install.html) need to be activated in the Jupyter lab environment.
 
 ### Simulation Code
 
-Simulations are written in R and Python. The Python version uses Just-In-Time Compilor to speed up the simulation. The R version is also available. Both code are in the folder `simulation`.
+Simulations are written in R and Python. The Python version uses the Just-In-Time Compiler to speed up the simulation. The R version is also available. The code is in the folder `simulation`.
 
 To run the simulation, change the parameter in the code and run
 
@@ -46,7 +46,7 @@ conda install -c numba icc_rt
 
 (Read more here about [SVML](https://numba.pydata.org/numba-doc/latest/user/performance-tips.html#intel-svml))
 
-Paralleld R version is also available. To run the R version, run
+The paralleled R version is also available. To run the R version, run
 
 ```bash
 Rscript simulation/benign_overfitting.R
