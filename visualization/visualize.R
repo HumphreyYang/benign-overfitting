@@ -1,4 +1,4 @@
-file_name <- '/home/humphreyyang/code/benign-overfitting/results/Python/results_[13-09-2023_23:02:29-2355].csv'
+file_name <- '/home/humphreyyang/code/benign-overfitting/results/Python/results_[14-09-2023_10:35:14-2355].csv'
 df <- read.csv(file_name)
 colnames(df) <- c('lambda', 'mu', 'p', 'n', 'snr', 'MSE')
 df$gamma <- df$p / df$n
@@ -25,10 +25,10 @@ plot(NULL, xlim = c(-1, 1), ylim = c(0, 20),
 # Add custom axis
 axis(1, at = symlog_transform(c(0.1, 0.2, 0.5, 1, 2, 5, 10)), 
      labels = c(0.1, 0.2, 0.5, 1, 2, 5, 10))
-axis(2, at = seq(0, 20, by = 5))
+axis(2, at = seq(0, 10, by = 5))
 
 # Add grid
-abline(h = seq(0, 20, by = 5), col = 'grey', lty = 2)
+abline(h = seq(0, 10, by = 5), col = 'grey', lty = 2)
 abline(v = c(-1, -0.75, -0.25, 0, 0.25, 0.75, 1), col = 'grey', lty = 2)
 
 # Plotting the points and lines

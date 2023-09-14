@@ -28,8 +28,8 @@ def compute_Y(X, β, ε):
 def scale_norm(β, snr):
     if np.linalg.norm(β) == 0:
         return β
-    norm_X = np.linalg.norm(β)
-    β_normalized = (snr / norm_X) * β
+    norm_X = np.linalg.norm(β)**2
+    β_normalized = np.sqrt((snr / norm_X)) * β
     return β_normalized
 
 @numba.njit(cache=True, fastmath=True, nogil=True)
@@ -51,7 +51,6 @@ def compute_X(λ, μ, n, p, seed=None):
     Γ = (V @ A) @ V.T
     
     np.random.seed(seed)
-        
     Z = np.random.normal(0, 1, (n, p))
     return Γ @ (Z @ C)
 
@@ -76,6 +75,7 @@ def efficient_simulation(μ_array, λ_array, n_array, p_array, snr_array, σ,
                 for p in p_array:
                     X_p = np.ascontiguousarray(X[:, :p])
                     β = scale_norm(np.ones(p), snr)
+                    print(np.linalg.norm(β)**2)
                     Y = compute_Y(X_p, β, ε)
                     X_train = X_p[:n,:]
                     X_test = X_p[n:, :]
@@ -105,7 +105,7 @@ def generate_symlog_points(n1, n2, L, U, a):
     return symlog_points
 
 if __name__ == "__main__":
-    μ_array = np.array([1])
+    μ_array = np.linspace(1, 100, 8)
     λ_array = np.array([1])
     n1, n2 = 30, 30
     γ = generate_symlog_points(n1, n2, 0.1, 10, 1)
