@@ -1,3 +1,5 @@
+library(MASS)
+
 library(pracma)
 library(doParallel)
 library(foreach)
@@ -31,8 +33,8 @@ compute_X <- function(lambda, mu, p, n, U, V, seed = NULL) {
   C <- U %*% diag(c(lambda, rep(1, p - 1))) %*% t(U)
   Gamma <- V %*% diag(c(mu, rep(1, n - 1))) %*% t(V)
   if (!is.null(seed)) set.seed(seed)
-  Z <- matrix(rnorm(p * n), nrow = p, ncol = n)
-  return(C %*% Z %*% Gamma)
+  Z <- matrix(rnorm(p * n), nrow = n, ncol = p)
+  return(Gamma %*% Z %*% C)
 }
 
 scale_norm <- function(X, out_norm) {
@@ -41,25 +43,28 @@ scale_norm <- function(X, out_norm) {
 }
 
 # Main Function
-simulate_test_MSE <- function(lambda, mu, p, n, snr, test_size, seed = NULL) {
+simulate_risks <- function(lambda, mu, p, n, snr, test_n, seed = NULL) {
+  total_n <- n + test_n
   if (!is.null(seed)) set.seed(seed+1)
   U <- randortho(p, type = 'orthonormal')
   if (!is.null(seed)) set.seed(seed+2)
-  V <- randortho(n, type = 'orthonormal')
+  V <- randortho(total_n, type = 'orthonormal')
   stopifnot(check_orthonormal(U), check_orthonormal(V))
 
-  if (!is.null(seed)) set.seed(seed)
-  X <- t(compute_X(lambda, mu, p, n, U, V, seed))
-  X_train <- X[1:train_size, ]
-  X_test <- X[(train_size + test_size):n, ]
-  
+  X <- compute_X(lambda, mu, p, total_n, U, V, seed)
+  X_p <- X[, 1:p, drop=FALSE]
   beta <- scale_norm(matrix(rep(1, p), p, 1), snr)
-  sigma <- 1.0
-  Y <- compute_Y(X, beta, sigma, seed)
-  null_risk <- (Y - mean(Y))^2 / length(Y)
-  Y_train <- Y[1:train_size]
-  Y_test <- Y[(train_size + 1):n]
+  
+  Y <- compute_Y(X_p, beta, 1, seed)
+  null_risk <- sum((Y - mean(Y))^2) / length(Y)
+  
+  X_train <- X_p[1:n, , drop=FALSE]
+  X_test <- X_p[(n + 1):(nrow(X)), , drop=FALSE]
+  Y_train <- Y[1:n]
+  Y_test <- Y[(n + 1):length(Y)]
   
   beta_hat <- solve_beta_hat(X_train, Y_train)
-  return(calculate_MSE(beta_hat, X_test, Y_test))
+  test_MSE <- calculate_MSE(beta_hat, X_test, Y_test)
+  
+  return(test_MSE)
 }

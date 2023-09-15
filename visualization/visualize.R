@@ -2,7 +2,7 @@
 library("viridis") 
 library(RColorBrewer)
 
-file_name <- '/home/humphreyyang/code/benign-overfitting/results/Python/results_[14-09-2023_11:19:06-2355].csv'
+file_name <- '/home/humphreyyang/code/benign-overfitting/results/Python/results_[15-09-2023_21:52:30-1458].csv'
 df <- read.csv(file_name)
 colnames(df) <- c('lambda', 'mu', 'p', 'n', 'snr', 'MSE')
 df$gamma <- df$p / df$n
@@ -38,7 +38,7 @@ for (mu_val in unique(df$mu)){
 
     # Plotting the points and lines
     unique_snrs <- unique(df_mu$snr)
-    colors <- brewer.pal(n = length(unique_snrs), name = "Dark2")
+    colors <- palette()
 
     snr_legend <- numeric()
 
@@ -53,6 +53,7 @@ for (mu_val in unique(df$mu)){
         # Separate gamma into two ranges and apply linear spline interpolation
         sub_df_s <- subset(sub_df, gamma <= 1)
         sub_df_l <- subset(sub_df, gamma >= 1)
+        abline(h=snr_val, col = colors[i], lty = 2, lwd = 3)
         
         for (sub_df in list(sub_df_s, sub_df_l)) {
         if (nrow(sub_df) > 1) {
@@ -62,9 +63,9 @@ for (mu_val in unique(df$mu)){
     }
 
     # Add legend
-    legend('topright', legend = snr_legend, col = colors, pch = 19, cex=2, title = "SNR")
+    legend('topright', legend = snr_legend, col = colors, pch = 19, cex=2)
 
-    title(main=bquote("Isotropic features " ~ mu == .(round(mu_val, 2))), cex.main=2)
+    title(main=bquote(~ mu == .(round(mu_val, 2))), cex.main=2)
     # Close the PNG device
     dev.off()
 }

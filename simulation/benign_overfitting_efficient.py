@@ -22,14 +22,15 @@ def solve_β_hat(X, Y):
     β_hat = np.linalg.pinv(XTX) @ X.T @ Y
     return β_hat
 
-def calculate_MSE(β_hat, X, Y):
+@numba.njit(cache=True, fastmath=True, nogil=True)
+def calculate_MSE(β_hat, β, X_test):
     """
     Calculates the mean squared error of the prediction.
 
     MSE = \frac{1}{n} \sum_{i=1}^{n} (y_i - \hat{y}_i)^2
     """
-    pred_diff = Y - (X @ β_hat)
-    return np.sum(pred_diff ** 2) / X.shape[0]
+    pred_diff = X_test @ β_hat - X_test @ β
+    return np.sum(pred_diff ** 2) / X_test.shape[0]
 
 @numba.njit(cache=True, fastmath=True, nogil=True)
 def compute_Y(X, β, ε):
@@ -57,7 +58,7 @@ def generate_orthonormal_matrix(dim, seed=None):
     Generate random orthonormal matrix of size dim x dim.
     """
         
-    np.random.seed(seed)
+    np.random.seed(seed+1)
     a = np.random.randn(dim, dim)
     res, _ = np.linalg.qr(a)
     return np.ascontiguousarray(res)
@@ -73,15 +74,15 @@ def compute_X(λ, μ, n, p, seed=None):
     C is a p x p matrix with eigenvalues (λ, 1, ..., 1).
     """
 
-    U = generate_orthonormal_matrix(p, seed=seed)
-    V = generate_orthonormal_matrix(n, seed=seed)
+    U = generate_orthonormal_matrix(p, seed=seed+1)
+    V = generate_orthonormal_matrix(n, seed=seed+2)
 
     Λ = np.diag(np.concatenate((np.array([λ]), np.ones(p-1))))
     C = (U @ Λ) @ U.T
     A = np.diag(np.concatenate((np.array([μ]), np.ones(n-1))))
     Γ = (V @ A) @ V.T
     
-    np.random.seed(seed)
+    np.random.seed(seed+3)
     Z = np.random.normal(0, 1, (n, p))
     return Γ @ (Z @ C)
 
@@ -100,17 +101,22 @@ def simulate_risks(X, ε, params):
     """
     λ, μ, p, n, snr = params
     X_p = np.ascontiguousarray(X[:, :p])
-    β = scale_norm(np.ones(p), snr)
-    print(np.linalg.norm(β)**2)
+    β = scale_norm(np.random.normal(0, 1, p), snr)
+    print("X_p: ", X_p.shape)
+    print("β: ", β.shape)
+    print("ε: ", ε.shape)
     Y = compute_Y(X_p, β, ε)
-    null_risk =  np.sum(Y - np.mean(Y))**2 / len(Y)
+    null_risk = np.linalg.norm(β)**2
+    print(null_risk)
     X_train = X_p[:n,:]
     X_test = X_p[n:, :]
     Y_train = Y[:n]
-    Y_test = Y[n:]
     β_hat = solve_β_hat(X_train, Y_train)
-    test_MSE = calculate_MSE(β_hat, X_test, Y_test)
-    return np.array([λ, μ, p, n, snr, test_MSE, null_risk], 
+    test_MSE = calculate_MSE(β_hat, β, X_test)
+    print('testMSE: ', test_MSE)
+    print(X_p.shape[0])
+    print('MSE_groud_truth: ', np.sum((Y - X_p @ β_hat)**2) / X_p.shape[0])
+    return np.array([λ, μ, p, n, snr, test_MSE], 
                                 dtype=np.float64)
     
 def efficient_simulation(μ_array, λ_array, n_array, p_array, snr_array, σ, 
@@ -124,7 +130,7 @@ def efficient_simulation(μ_array, λ_array, n_array, p_array, snr_array, σ,
     ε = compute_ε(σ, n+test_n, seed+1) 
     for λ in λ_array:
         for μ in μ_array:
-            X = compute_X(λ, μ, n+test_n, max_p, seed)
+            X = compute_X(λ, μ, n+test_n, max_p, seed+2)
             for snr in snr_array:
                 for p in p_array:
                     params = λ, μ, p, n, snr
@@ -143,19 +149,16 @@ def generate_symlog_points(n1, n2, L, U, a):
 
 if __name__ == "__main__":
     μ_array = np.array([1, 100, 200, 500])
+    # μ_array = np.array([1])
     λ_array = np.array([1])
     n1, n2 = 30, 30
     γ = generate_symlog_points(n1, n2, 0.1, 10, 1)
-
-    print(γ)
-    
+    # γ = np.array([0.1])
     n_array = np.array([200])
     p_array = np.unique((γ * n_array).astype(int))
-    print(p_array)
     snr_array = np.linspace(1, 5, 4)
     σ = 1.0
-    print(snr_array)
-    seed = 2355
+    seed = 1458
 
     start_time = time.time()
     now = datetime.now()
@@ -163,10 +166,10 @@ if __name__ == "__main__":
     print("date and time =", dt_string)
     filename = f'results/Python/results_[{dt_string}-{seed}].csv'
     total_combinations = len(μ_array) * len(λ_array) * len(n_array) * len(p_array) * len(snr_array)
-    result_arr = np.zeros((total_combinations, 7), dtype=np.float64)
+    result_arr = np.zeros((total_combinations, 6), dtype=np.float64)
     with ProgressBar(total=total_combinations) as progress:
         result_arr = efficient_simulation(μ_array, λ_array, n_array, p_array, snr_array, σ, result_arr, progress, seed=seed)
-    df = pd.DataFrame(result_arr, columns=['λ', 'μ', 'p', 'n', 'snr', 'MSE', 'null_risk'])
+    df = pd.DataFrame(result_arr, columns=['λ', 'μ', 'p', 'n', 'snr', 'MSE'])
     df.to_csv(filename, index=False)
     print(time.time()-start_time)
     print('Finished Runing Simulations')
