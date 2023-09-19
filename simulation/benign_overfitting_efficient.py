@@ -40,7 +40,7 @@ def calculate_MSE(β_hat, β, X_test):
     """
     Calculates the mean squared error of the prediction.
 
-    MSE = \frac{1}{n} \sum_{i=1}^{n} (y_i - \hat{y}_i)^2
+    MSE = (1/n) ||X β_hat - X β||^2
 
     Parameters
     ----------
@@ -49,7 +49,7 @@ def calculate_MSE(β_hat, β, X_test):
     β : array-like
         Ground truth coefficient vector.
     X_test : array-like
-        Data matrix for Covariates.
+        Test data matrix for covariates.
 
     Returns
     -------
@@ -113,8 +113,6 @@ def generate_orthonormal_matrix(dim):
     ----------
     dim : int
         Dimension of the matrix.
-    seed : int
-        Seed for the random number generator.
 
     Returns
     -------
