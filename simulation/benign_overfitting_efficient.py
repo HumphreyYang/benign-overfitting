@@ -18,7 +18,19 @@ def solve_β_hat(X, Y):
 
     β_hat = (X^T X)^{+} X^T Y    
 
+    Parameters
+    ----------
+    X : array-like
+        Data matrix for Covariates.
+    Y : array-like
+        Array for response variable.
+    
+    Returns
+    -------
+    β_hat : array-like
+        Coefficient vector.
     """
+
     XTX = X.T @ X
     β_hat = np.linalg.pinv(XTX) @ X.T @ Y
     return β_hat
@@ -29,6 +41,19 @@ def calculate_MSE(β_hat, β, X_test):
     Calculates the mean squared error of the prediction.
 
     MSE = \frac{1}{n} \sum_{i=1}^{n} (y_i - \hat{y}_i)^2
+
+    Parameters
+    ----------
+    β_hat : array-like
+        Coefficient vector.
+    β : array-like
+        Ground truth coefficient vector.
+    X_test : array-like
+        Data matrix for Covariates.
+
+    Returns
+    -------
+    MSE : float
     """
     pred_diff = X_test @ β_hat - X_test @ β
     return np.sum(pred_diff ** 2) / X_test.shape[0]
@@ -39,6 +64,20 @@ def compute_Y(X, β, ε):
     Computes the response variable Y.
 
     Y = X β + ε
+
+    Parameters
+    ----------
+    X : array-like
+        Data matrix for Covariates.
+    β : array-like
+        Coefficient vector.
+    ε : array-like
+        Noise vector.
+
+    Returns
+    -------
+    Y : array-like
+        Response variable array
     """
     return X @ β + ε
 
@@ -46,6 +85,18 @@ def compute_Y(X, β, ε):
 def scale_norm(β, snr):
     """
     Scale β to have a given squared l2 norm.
+
+    Parameters
+    ----------
+    β : array-like
+        Vector to be scaled.
+    snr : float
+        Signal-to-noise ratio.
+
+    Returns
+    -------
+    β_normalized : array-like
+        Normalized β vector with squared l2 norm equal to snr.
     """
     if np.linalg.norm(β) == 0:
         return β
@@ -57,6 +108,18 @@ def scale_norm(β, snr):
 def generate_orthonormal_matrix(dim):
     """
     Generate random orthonormal matrix of size dim x dim.
+
+    Parameters
+    ----------
+    dim : int
+        Dimension of the matrix.
+    seed : int
+        Seed for the random number generator.
+
+    Returns
+    -------
+    res : array-like
+        Orthonormal matrix.
     """
     a = np.ones((dim, dim))
     res, _ = np.linalg.qr(a)
@@ -71,6 +134,24 @@ def compute_X(λ, μ, n, p, seed=None):
     Γ is a n x n matrix with eigenvalues (μ, 1, ..., 1);
     
     C is a p x p matrix with eigenvalues (λ, 1, ..., 1).
+
+    Parameters
+    ----------
+    λ : float
+        Largest eigenvalue of C.
+    μ : float
+        Largest eigenvalue of Γ.
+    n : int
+        Number of observations.
+    p : int
+        Number of features.
+    seed : int
+        Seed for the random number generator.
+    
+    Returns
+    -------
+    X : array-like
+        Data matrix.
     """
 
     U = generate_orthonormal_matrix(p)
@@ -89,6 +170,20 @@ def compute_X(λ, μ, n, p, seed=None):
 def compute_ε(σ, n, seed=None):
     """
     Generate ε = N(0, σ^2 I_n).
+
+    Parameters
+    ----------
+    σ : float
+        Standard deviation of the noise.
+    n : int
+        Number of observations.
+    seed : int
+        Seed for the random number generator.
+
+    Returns
+    -------
+    ε : array-like
+        Noise vector.
     """
 
     np.random.seed(seed)
@@ -98,7 +193,22 @@ def compute_ε(σ, n, seed=None):
 def simulate_risks(X, ε, params):
     """
     Fit the LS model and calculate the test MSE and null risk.
+
+    Parameters
+    ----------
+    X : array-like
+        Data matrix.
+    ε : array-like
+        Noise vector.
+    params : tuple
+        Tuple of parameters (λ, μ, p, n, snr).\
+    
+    Returns
+    -------
+    result : array-like
+        Array of parameters and risks.
     """
+
     λ, μ, p, n, snr = params
     X_p = np.ascontiguousarray(X[:, :p])
     β = scale_norm(np.ones(p), snr)
@@ -115,6 +225,36 @@ def simulate_risks(X, ε, params):
     
 def efficient_simulation(μ_array, λ_array, n_array, p_array, snr_array, σ, 
                          result_arr, progress, seed=None):
+    """
+    Simulate the test MSE and null risk for different values of λ, μ, n, p, snr.
+
+    Parameters
+    ----------
+    μ_array : array-like
+        Array of values for μ.
+    λ_array : array-like   
+        Array of values for λ.
+    n_array : array-like
+        Array of values for n.
+    p_array : array-like
+        Array of values for p.
+    snr_array : array-like
+        Array of values for snr.
+    σ : float
+        Standard deviation of the noise.
+    result_arr : array-like
+        Array to store the results.
+    progress : ProgressBar
+        Progress bar.
+    seed : int
+        Seed for the random number generator.
+    
+    Returns
+    -------
+    result_arr : array-like
+        Array of parameters and risks.
+    """
+
     if seed is None:
         raise ValueError('seed is None')
     idx = 0
@@ -134,6 +274,29 @@ def efficient_simulation(μ_array, λ_array, n_array, p_array, snr_array, σ,
     return result_arr
 
 def generate_symlog_points(n1, n2, L, U, a):
+    """
+    Generate a list of points in a symmetric logarithmic scale.
+    
+    The points are generated in the interval [L, U] with a break at a.
+
+    Parameters
+    ----------
+    n1 : int
+        Number of points in the interval [L, a).
+    n2 : int
+        Number of points in the interval (a, U].
+    L : float
+        Lower bound of the interval.
+    U : float
+        Upper bound of the interval.
+    a : float
+        Break point.
+    
+    Returns
+    -------
+    symlog_points : array-like
+        Array of points in a symmetric logarithmic scale.
+    """
 
     log_part_lower = np.logspace(np.log10(L), np.log10(a-0.001), n1, endpoint=False)
     log_part_upper = np.logspace(np.log10(a+0.001), np.log10(U), n2, endpoint=True)
