@@ -2,7 +2,7 @@
 library("viridis") 
 library(RColorBrewer)
 
-file_name <- '/home/humphreyyang/code/benign-overfitting/results/Python/results_[20-09-2023_05:57:38-1329].csv'
+file_name <- '/home/humphreyyang/code/benign-overfitting/results/Python/results_[20-09-2023_09:26:35-1505].csv'
 df <- read.csv(file_name)
 colnames(df) <- c('lambda', 'mu', 'p', 'n', 'snr', 'MSE')
 df$gamma <- df$p / df$n
@@ -20,7 +20,7 @@ for (mu_val in unique(df$mu)){
     df_mu = subset(df, mu == mu_val)
       
     # Open a PNG device
-    png(paste0("visualization/figures/isotropic_features", expression(mu), '_', round(mu_val, 2), ".png"), width = 800, height = 800)
+    png(paste0("visualization/figures/", expression(mu), '_', round(mu_val, 2), ".png"), width = 800, height = 800)
 
     # Initialize plot
     plot(NULL, xlim = c(-1, 1), ylim = c(0, 10), 
@@ -71,7 +71,7 @@ for (mu_val in unique(df$mu)){
 }
 
 
-file_name <- '/home/humphreyyang/code/benign-overfitting/results/Python/results_[20-09-2023_06:15:28-1329].csv'
+file_name <- '/home/humphreyyang/code/benign-overfitting/results/Python/results_[20-09-2023_10:41:19-1505].csv'
 df <- read.csv(file_name)
 colnames(df) <- c('lambda', 'mu', 'p', 'n', 'snr', 'MSE')
 df$gamma <- df$p / df$n
@@ -81,7 +81,7 @@ for (lambda_val in unique(df$lambda)){
     df_lambda = subset(df, lambda == lambda_val)
       
     # Open a PNG device
-    png(paste0("visualization/figures/isotropic_features", expression(lambda), '_', round(lambda_val, 2), ".png"), width = 800, height = 800)
+    png(paste0("visualization/figures/", expression(lambda), '_', round(lambda_val, 2), ".png"), width = 800, height = 800)
 
     # Initialize plot
     plot(NULL, xlim = c(-1, 1), ylim = c(0, 10), 

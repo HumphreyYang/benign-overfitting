@@ -1,6 +1,6 @@
-# Benign Overfitting in Linear Regression with Separable Variance–Covariance
+# Benign Overfitting in Linear Regression with Separable Sample Covariance Matrices
 
-This repo contains simulation files for the project **Benign Overfitting in Linear Regression with Separable Variance–Covariance**.
+This repo contains simulation files for the project **Benign Overfitting in Linear Regression with Separable Sample Covariance Matrices**.
 
 ## Environment Setup
 

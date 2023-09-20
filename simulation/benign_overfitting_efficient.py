@@ -81,7 +81,7 @@ def compute_Y(X, β, ε):
     """
     return X @ β + ε
 
-@numba.njit(cache=True, fastmath=True, parallel=True, nogil=True)
+@numba.njit(cache=True, fastmath=True, nogil=True)
 def scale_norm(β, snr):
     """
     Scale β to have a given squared l2 norm.
@@ -211,10 +211,8 @@ def simulate_risks(X, ε, params):
     X_p = np.ascontiguousarray(X[:, :p])
     β = scale_norm(np.ones(p), snr)
     Y = compute_Y(X_p, β, ε)
-    null_risk = np.linalg.norm(β)**2
-    print(null_risk)
-    X_train = X_p[:n, :]
-    X_test = X_p[n:, :]
+    X_train = np.ascontiguousarray(X_p[:n, :])
+    X_test = np.ascontiguousarray(X_p[n:, :])
     Y_train = Y[:n]
     β_hat = solve_β_hat(X_train, Y_train)
     test_MSE = calculate_MSE(β_hat, β, X_test)
