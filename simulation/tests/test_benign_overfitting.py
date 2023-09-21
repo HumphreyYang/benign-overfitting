@@ -1,7 +1,6 @@
 import unittest
 import numpy as np
-from simulation.benign_overfitting_efficient import *
-
+from simulation.benign_overfitting import *
 
 seed = np.random.randint(0, 2**32 - 1)
 print('seed =', seed)
@@ -22,8 +21,8 @@ def check_orthonormal(A):
        return False
     return True
 
-def check_pos_simidef(X):
-    return np.all(np.linalg.eigvals(X) >= 0)
+def is_pos_semidef(X, ϵ=1e-5):
+    return np.all(np.linalg.eigvals(X) >= -ϵ)
 
 class TestSimulationMethods(unittest.TestCase):
 
@@ -99,8 +98,8 @@ class TestSimulationMethods(unittest.TestCase):
         Γ = V @ np.diag([μ] + [1] * (n-1)) @ V.T
         C = U @ np.diag([λ] + [1] * (p-1)) @ U.T
 
-        self.assertTrue(check_pos_simidef(Γ))
-        self.assertTrue(check_pos_simidef(C))
+        self.assertTrue(is_pos_semidef(Γ))
+        self.assertTrue(is_pos_semidef(C))
 
         X_expected = V @ np.diag([μ] + [1] * (n-1)) @ V.T @ Z_expected @ U @ np.diag([λ] + [1] * (p-1)) @ U.T
         X_actual = compute_X(λ, μ, n, p, seed=seed)

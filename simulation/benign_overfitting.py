@@ -10,6 +10,8 @@ from numba import prange
 from numba.typed import List
 from numba_progress import ProgressBar
 import argparse
+from collections.abc import Iterable
+from statsmodels.stats.correlation_tools import cov_nearest
 
 @numba.njit(cache=True, fastmath=True, nogil=True)
 def solve_β_hat(X, Y):
@@ -57,6 +59,30 @@ def calculate_MSE(β_hat, β, X_test):
     """
     pred_diff = X_test @ β_hat - X_test @ β
     return np.sum(pred_diff ** 2) / X_test.shape[0]
+
+def is_pos_semidef(X, ϵ=1e-5):
+    return np.all(np.linalg.eigvals(X) >= -ϵ)
+
+def compute_compound_cov(p, ρ, σ):
+    Σ_compound = np.diag(np.ones(p))
+    mask_off_dia = ~np.eye(Σ_compound.shape[0],dtype=bool)
+    Σ_compound[mask_off_dia] = ρ
+    Σ_compound = σ**2 * Σ_compound
+    Σ_compound = cov_nearest(Σ_compound)
+    assert is_pos_semidef(Σ_compound)
+
+    return Σ_compound
+
+def compute_random_compound_cov(p, ρ_mag, σ):
+    Σ_compound = np.diag(np.ones(p))
+    mask_off_dia = ~np.eye(Σ_compound.shape[0],dtype=bool)
+    Σ_compound[mask_off_dia] = np.random.uniform(-ρ_mag, ρ_mag, p**2 - p)
+    Σ_compound = σ**2 * Σ_compound
+    Σ_compound = cov_nearest(Σ_compound)
+    assert is_pos_semidef(Σ_compound)
+
+    return Σ_compound
+
 
 @numba.njit(cache=True, fastmath=True, nogil=True)
 def compute_Y(X, β, ε):
@@ -119,11 +145,12 @@ def generate_orthonormal_matrix(dim):
     res : array-like
         Orthonormal matrix.
     """
+    np.random.seed(10)
+    # a = np.random.uniform(0, 1, (dim, dim))
     a = np.ones((dim, dim))
     res, _ = np.linalg.qr(a)
     return np.ascontiguousarray(res)
 
-@numba.njit(cache=True, fastmath=True, nogil=True)
 def compute_X(λ, μ, n, p, seed=None):
     """
     Generate X = Γ Z C, where Z is a n x p matrix of iid standard normal 
@@ -156,9 +183,12 @@ def compute_X(λ, μ, n, p, seed=None):
     V = generate_orthonormal_matrix(n)
 
     Λ = np.diag(np.concatenate((np.array([λ]), np.ones(p-1))))
-    C = (U @ Λ) @ U.T
+    C = ((U @ Λ) @ U.T).real
     A = np.diag(np.concatenate((np.array([μ]), np.ones(n-1))))
-    Γ = (V @ A) @ V.T
+    Γ = ((V @ A) @ V.T).real
+
+    assert is_pos_semidef(Γ)
+    assert is_pos_semidef(C)
     
     np.random.seed(seed)
     Z = np.random.normal(0, 1, (n, p))
@@ -188,9 +218,9 @@ def compute_ε(σ, n, seed=None):
     return np.random.normal(0, σ, n)
 
 @numba.njit(cache=True, fastmath=True, nogil=True)
-def simulate_risks(X, ε, params):
+def simulate_risks(X, ε, p, n, snr):
     """
-    Fit the LS model and calculate the test MSE and null risk.
+    Fit the LS model and calculate the test MSE.
 
     Parameters
     ----------
@@ -207,7 +237,6 @@ def simulate_risks(X, ε, params):
         Array of parameters and risks.
     """
 
-    λ, μ, p, n, snr = params
     X_p = np.ascontiguousarray(X[:, :p])
     β = scale_norm(np.ones(p), snr)
     Y = compute_Y(X_p, β, ε)
@@ -216,10 +245,13 @@ def simulate_risks(X, ε, params):
     Y_train = Y[:n]
     β_hat = solve_β_hat(X_train, Y_train)
     test_MSE = calculate_MSE(β_hat, β, X_test)
-    return np.array([λ, μ, p, n, snr, test_MSE], 
-                                dtype=np.float64)
-    
-def efficient_simulation(μ_array, λ_array, n_array, p_array, snr_array, σ, 
+    return test_MSE
+
+@numba.njit(cache=True, fastmath=True, nogil=True)
+def check_pos_simidef(X):
+    return np.all(np.linalg.eigvals(X) >= 0)
+  
+def simulations_lambda_mu(μ_array, λ_array, n_array, p_array, snr_array, σ, 
                          result_arr, progress, seed=None):
     """
     Simulate the test MSE and null risk for different values of λ, μ, n, p, snr.
@@ -264,7 +296,7 @@ def efficient_simulation(μ_array, λ_array, n_array, p_array, snr_array, σ,
             for snr in snr_array:
                 for p in p_array:
                     params = λ, μ, p, n, snr
-                    result_arr[idx] = simulate_risks(X, ε, params)
+                    result_arr[idx] = np.array([*params, simulate_risks(X, ε, p, n, snr)])
                     idx += 1
                     progress.update(1)
     return result_arr
@@ -300,49 +332,19 @@ def generate_symlog_points(n1, n2, L, U, a):
     
     return symlog_points
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Run simulations with varying parameters.')
-    
-    parser.add_argument('--mu', type=int, nargs='+', default=[1, 100, 200, 500], help='Array of mu values.')
-    parser.add_argument('--Lambda', type=int, nargs='+', default=[1], help='Array of lambda values.')
-    parser.add_argument('--n1', type=int, default=30, help='Parameter n1 for symlog points before center point.')
-    parser.add_argument('--n2', type=int, default=30, help='Parameter n2 for symlog points after center point.')
-    parser.add_argument('--n_array', type=int, nargs='+', default=[200], help='Array of n values.')
-    parser.add_argument('--snr', type=int, nargs='+', default=[1, 5, 4], help='Array of snr values.')
-    parser.add_argument('--sigma', type=float, default=1.0, help='Sigma value.')
-    parser.add_argument('--seed', type=int, default=1, help='Random seed.')
-    
-    args = parser.parse_args()
-    
-    μ_array = np.array(args.mu)
-    λ_array = np.array(args.Lambda)
-    n1, n2 = args.n1, args.n2
-    γ = generate_symlog_points(n1, n2, 0.1, 10, 1)
-    n_array = np.array(args.n_array)
-    p_array = np.unique((γ * n_array).astype(int))
-    snr_array = np.linspace(args.snr[0], args.snr[1], args.snr[2])
-    σ = args.sigma
-    seed = args.seed
-
-    print('Running Simulations')
-    print(f'μ_array: {μ_array}')
-    print(f'λ_array: {λ_array}')
-    print(f'n_array: {n_array}')
-    print(f'p_array: {p_array}')
-    print(f'snr_array: {snr_array}')
-    print(f'σ: {σ}')
-    print(f'seed: {seed}')
-
+def run_func_parameters(func, params, columns, seed=None, name=''):
     start_time = time.time()
     now = datetime.now()
     dt_string = now.strftime("%d-%m-%Y_%H:%M:%S")
     print("date and time =", dt_string)
-    filename = f'results/Python/results_[{dt_string}-{seed}].csv'
-    total_combinations = len(μ_array) * len(λ_array) * len(n_array) * len(p_array) * len(snr_array)
-    result_arr = np.zeros((total_combinations, 6), dtype=np.float64)
-    with ProgressBar(total=total_combinations) as progress:
-        result_arr = efficient_simulation(μ_array, λ_array, n_array, p_array, snr_array, σ, result_arr, progress, seed=seed)
-    df = pd.DataFrame(result_arr, columns=['λ', 'μ', 'p', 'n', 'snr', 'MSE'])
+    filename = f'results/Python/{name}results_[{dt_string}-{seed}].csv'
+    total_com = 1
+    for parm in params:
+        total_com *= len(parm) if hasattr(parm,  '__len__') else 1
+    result_arr = np.zeros((total_com, len(columns)), dtype=np.float64)
+    with ProgressBar(total=total_com) as progress:
+        result_arr = func(*params, result_arr, progress, seed=seed)
+    df = pd.DataFrame(result_arr, columns=columns)
     df.to_csv(filename, index=False)
     print(time.time()-start_time)
     print('Finished Runing Simulations')

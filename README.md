@@ -7,7 +7,7 @@ This repo contains simulation files for the project **Benign Overfitting in Line
 To set up the environment, run
 
 ```bash
-conda create -n bo python==3.10
+conda create -n bo python==3.9.16
 ```
 
 and install the packages in `requirements.txt` using
