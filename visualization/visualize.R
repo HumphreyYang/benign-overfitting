@@ -71,7 +71,7 @@ for (mu_val in unique(df$mu)){
 }
 
 
-file_name <- '/home/humphreyyang/code/benign-overfitting/results/Python/lambda_muresults_[21-09-2023_17:09:00-1505].csv'
+file_name <- '/home/humphreyyang/code/benign-overfitting/results/Python/results_[20-09-2023_10:59:25-1505].csv'
 df <- read.csv(file_name)
 colnames(df) <- c('lambda', 'mu', 'p', 'n', 'snr', 'MSE')
 df$gamma <- df$p / df$n

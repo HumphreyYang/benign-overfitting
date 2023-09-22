@@ -146,8 +146,8 @@ def generate_orthonormal_matrix(dim):
         Orthonormal matrix.
     """
     np.random.seed(10)
-    # a = np.random.uniform(0, 1, (dim, dim))
-    a = np.ones((dim, dim))
+    a = np.random.uniform(10, 20, (dim, dim))
+    # a = np.ones((dim, dim))
     res, _ = np.linalg.qr(a)
     return np.ascontiguousarray(res)
 

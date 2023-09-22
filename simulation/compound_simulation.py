@@ -42,7 +42,7 @@ if __name__ == '__main__':
     # ρ_array = np.array([-0.3, -0.5, -0.7])
     ρ_array = np.array([0.3, 0.5, 1])
     n1, n2 = 30, 30
-    γ = bo.generate_symlog_points(n1, n2, 0.1, 100, 1)
+    γ = bo.generate_symlog_points(n1, n2, 0.1, 10, 1)
     n_array = np.array([200])
     p_array = np.unique((γ * n_array).astype(int))
     snr_array = np.linspace(1, 5, 4)

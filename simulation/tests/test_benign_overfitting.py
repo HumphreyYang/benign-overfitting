@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from simulation.benign_overfitting import *
+import simulation.benign_overfitting as bo 
 
 seed = np.random.randint(0, 2**32 - 1)
 print('seed =', seed)
@@ -44,13 +44,13 @@ class TestSimulationMethods(unittest.TestCase):
         X = np.array([[1.0, 2.0], [3.0, 4.0], [5.0, 6.0]])
         Y = np.array([3.0, 7.0, 11.0])
         β_hat_expected = np.array([1.0, 1.0])
-        β_hat = solve_β_hat(X, Y)
+        β_hat = bo.solve_β_hat(X, Y)
         np.testing.assert_allclose(β_hat, β_hat_expected, rtol=1e-8)
         
         # Test with ill-conditioned matrix
         X = np.array([[1.0, 2.0], [1.0, 2.0001], [1, 2.0002]])
         Y = np.array([3.0, 3.0001, 3.0002])
-        β_hat = solve_β_hat(X, Y)
+        β_hat = bo.solve_β_hat(X, Y)
         β_hat_expected = np.linalg.lstsq(X, Y, rcond=None)[0]
         np.testing.assert_allclose(β_hat, β_hat_expected, rtol=1e-5)
 
@@ -60,12 +60,12 @@ class TestSimulationMethods(unittest.TestCase):
         β_hat = np.array([2.0])
         β = np.array([2.0])
 
-        self.assertAlmostEqual(calculate_MSE(β_hat, β, X), 0, delta=1e-8)
+        self.assertAlmostEqual(bo.calculate_MSE(β_hat, β, X), 0, delta=1e-8)
         
         # Test with non-zero error
         β_hat = np.array([3.0])
 
-        self.assertAlmostEqual(calculate_MSE(β_hat, β, X), 14/3, delta=1e-8)
+        self.assertAlmostEqual(bo.calculate_MSE(β_hat, β, X), 14/3, delta=1e-8)
 
     def test_compute_Y(self):
         # Test with zero noise
@@ -73,7 +73,7 @@ class TestSimulationMethods(unittest.TestCase):
         β = np.array([1.0])
         σ = 0.0
         Y_expected = np.array([1.0, 1.0, 1.0])
-        Y_actual = compute_Y(X, β, σ)
+        Y_actual = bo.compute_Y(X, β, σ)
         np.testing.assert_allclose(Y_actual, Y_expected, rtol=1e-8)
         
         # Test with non-zero noise
@@ -81,7 +81,7 @@ class TestSimulationMethods(unittest.TestCase):
         np.random.seed(seed)
         noise = np.random.normal(0, σ, len(X))
         Y_expected = X @ β + noise
-        Y_actual = compute_Y(X, β, noise)
+        Y_actual = bo.compute_Y(X, β, noise)
         np.testing.assert_allclose(Y_actual, Y_expected, rtol=1e-8)
 
     def test_compute_X(self):
@@ -90,8 +90,8 @@ class TestSimulationMethods(unittest.TestCase):
         p = 2
         n = 3
 
-        U = generate_orthonormal_matrix(p)
-        V = generate_orthonormal_matrix(n)
+        U = bo.generate_orthonormal_matrix(p)
+        V = bo.generate_orthonormal_matrix(n)
 
         np.random.seed(seed)
         Z_expected = np.random.normal(0.0, 1.0, (n, p))
@@ -102,25 +102,25 @@ class TestSimulationMethods(unittest.TestCase):
         self.assertTrue(is_pos_semidef(C))
 
         X_expected = V @ np.diag([μ] + [1] * (n-1)) @ V.T @ Z_expected @ U @ np.diag([λ] + [1] * (p-1)) @ U.T
-        X_actual = compute_X(λ, μ, n, p, seed=seed)
+        X_actual = bo.compute_X(λ, μ, n, p, seed=seed)
         np.testing.assert_allclose(X_actual, X_expected, rtol=1e-8)
 
     def test_scale_norm(self):
         # Test with unit vector
         X = np.array([1.0, 0.0, 0.0])
         out_norm = 2
-        X_scaled = scale_norm(X, out_norm)
+        X_scaled = bo.scale_norm(X, out_norm)
         self.assertAlmostEqual(np.linalg.norm(X_scaled)**2, out_norm, delta=1e-8)
         
         # Test with zero vector
         X = np.array([0.0, 0.0, 0.0])
-        X_scaled = scale_norm(X, out_norm)
+        X_scaled = bo.scale_norm(X, out_norm)
         self.assertAlmostEqual(np.linalg.norm(X_scaled), 0, delta=1e-8)
 
     def test_generate_orthonormal_matrix(self):
 
         for dim in range(1, 10):
-            A = generate_orthonormal_matrix(dim)
+            A = bo.generate_orthonormal_matrix(dim)
             self.assertTrue(check_orthonormal(A))
 
     if __name__ == '__main__':
