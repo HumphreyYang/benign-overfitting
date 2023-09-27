@@ -1,13 +1,13 @@
-# Benign Overfitting in Linear Regression with Separable Variance–Covariance
+# Benign Overfitting in Linear Regression with Separable Sample Covariance Matrices
 
-This repo contains simulation files for the project **Benign Overfitting in Linear Regression with Separable Variance–Covariance**.
+This repo contains simulation files for the project **Benign Overfitting in Linear Regression with Separable Sample Covariance Matrices**.
 
 ## Environment Setup
 
 To set up the environment, run
 
 ```bash
-conda create -n bo python==3.10
+conda create -n bo python==3.9.16
 ```
 
 and install the packages in `requirements.txt` using
