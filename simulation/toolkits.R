@@ -1,5 +1,3 @@
-library(MASS)
-
 library(pracma)
 library(doParallel)
 library(foreach)
@@ -18,13 +16,12 @@ solve_beta_hat <- function(X, Y) {
   return(ginv(XTX) %*% t(X) %*% Y)
 }
 
-calculate_MSE <- function(beta_hat, X, Y) {
-  pred_diff <- Y - X %*% beta_hat
-  return(sum(pred_diff^2) / length(Y))
+calculate_MSE <- function(beta_hat, beta, X) {
+  pred_diff <- X %*% beta - X %*% beta_hat
+  return(sum(pred_diff**2) / nrow(X))
 }
 
 compute_Y <- function(X, beta, sigma, seed = NULL) {
-  if (!is.null(seed)) set.seed(seed)
   epsilon <- rnorm(nrow(X), 0, sigma)
   return(X %*% beta + epsilon)
 }
@@ -32,7 +29,6 @@ compute_Y <- function(X, beta, sigma, seed = NULL) {
 compute_X <- function(lambda, mu, p, n, U, V, seed = NULL) {
   C <- U %*% diag(c(lambda, rep(1, p - 1))) %*% t(U)
   Gamma <- V %*% diag(c(mu, rep(1, n - 1))) %*% t(V)
-  if (!is.null(seed)) set.seed(seed)
   Z <- matrix(rnorm(p * n), nrow = n, ncol = p)
   return(Gamma %*% Z %*% C)
 }
@@ -41,6 +37,14 @@ scale_norm <- function(X, out_norm) {
   norm_X <- norm(X, 'F')**2
   return(sqrt(out_norm / norm_X) * X)
 }
+
+# Generate a list of points in a symmetric logarithmic scale
+generate_symlog_points <- function(n1, n2, L, U, a) {
+  log_part_lower <- exp(seq(log(L), log(a - 0.001), length.out = n1))
+  log_part_upper <- exp(seq(log(a + 0.001), log(U), length.out = n2))
+  c(log_part_lower, log_part_upper)
+}
+
 
 # Main Function
 simulate_risks <- function(lambda, mu, p, n, snr, test_n, seed = NULL) {
@@ -64,7 +68,7 @@ simulate_risks <- function(lambda, mu, p, n, snr, test_n, seed = NULL) {
   Y_test <- Y[(n + 1):length(Y)]
   
   beta_hat <- solve_beta_hat(X_train, Y_train)
-  test_MSE <- calculate_MSE(beta_hat, X_test, Y_test)
+  test_MSE <- calculate_MSE(beta_hat, beta, X_test)
   
   return(test_MSE)
 }
