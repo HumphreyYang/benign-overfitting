@@ -20,7 +20,7 @@ def run_simulations_lambda_mu(parser):
     μ_array = np.array(args.mu)
     λ_array = np.array(args.Lambda)
     n1, n2 = args.n1, args.n2
-    γ = bo.generate_symlog_points(n1, n2, 0.1, 20, 1)
+    γ = bo.generate_symlog_points(n1, n2, 0.1, 50, 1)
     n_array = np.array(args.n_array)
     p_array = np.unique((γ * n_array).astype(int))
     snr_array = np.linspace(args.snr[0], args.snr[1], args.snr[2])
