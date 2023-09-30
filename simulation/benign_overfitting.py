@@ -214,7 +214,7 @@ def compute_ε(σ, n, seed=None):
     """
 
     np.random.seed(seed)
-    return np.random.normal(0, σ, n)
+    return np.random.normal(0.0, σ, n)
 
 @numba.njit(cache=True, fastmath=True, nogil=True)
 def simulate_risks(X, ε, p, n, snr):
@@ -250,7 +250,7 @@ def simulate_risks(X, ε, p, n, snr):
 def check_pos_simidef(X):
     return np.all(np.linalg.eigvals(X) >= 0)
   
-def simulations_lambda_mu(μ_array, λ_array, n_array, p_array, snr_array, σ, 
+def simulations_lambda_mu(μ_array, λ_array, n_array, p_array, snr_array, σ, test_n,
                          result_arr, progress, seed=None):
     """
     Simulate the test MSE and null risk for different values of λ, μ, n, p, snr.
@@ -287,7 +287,6 @@ def simulations_lambda_mu(μ_array, λ_array, n_array, p_array, snr_array, σ,
     idx = 0
     n = max(n_array)
     max_p = max(p_array)
-    test_n = 10000
     ε = compute_ε(σ, n+test_n, seed+1) 
     for λ in λ_array:
         for μ in μ_array:
@@ -342,6 +341,7 @@ def run_func_parameters(func, params, columns, seed=None, name=''):
         total_com *= len(parm) if hasattr(parm,  '__len__') else 1
     result_arr = np.zeros((total_com, len(columns)), dtype=np.float64)
     with ProgressBar(total=total_com) as progress:
+        print(params)
         result_arr = func(*params, result_arr, progress, seed=seed)
     df = pd.DataFrame(result_arr, columns=columns)
     df.to_csv(filename, index=False)

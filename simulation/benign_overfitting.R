@@ -7,7 +7,7 @@ source('simulation/toolkits.R')
 
 parallel_run_simulations <- function(mu_array, lambda_array, n_array, p_array, snr_array, test_n, seed, chunk_size, n_iterations, output_file) {
   start_time <- Sys.time()
-  cl <- makeCluster(detectCores(), outfile='')
+  cl <- makeCluster(2, outfile='')
   registerDoParallel(cl)
   functions_to_export <- c('simulate_risks', 'solve_beta_hat', 'calculate_MSE', 
                            'compute_Y', 'compute_X', 'scale_norm', 'check_orthonormal')
@@ -45,11 +45,11 @@ parallel_run_simulations <- function(mu_array, lambda_array, n_array, p_array, s
 time <- Sys.time()
 date <- Sys.Date()
 
-mu_array <- c(1, 100, 200, 500)
-lambda_array <- c(1)
+mu_array <- c(1)
+lambda_array <- c(1, 1.5, 2, 5, 10, 50, 100, 200)
 n1 <- 30
 n2 <- 60
-gamma_array <- generate_symlog_points(n1, n2, 0.1, 50, 1)
+gamma_array <- generate_symlog_points(n1, n2, 0.1, 100, 1)
 n_array <- c(100)
 p_array <- as.integer(gamma_array * n_array)
 snr_array <- seq(1, 5, length=4)
