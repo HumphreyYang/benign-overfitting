@@ -12,6 +12,7 @@ from numba_progress import ProgressBar
 import argparse
 from collections.abc import Iterable
 from statsmodels.stats.correlation_tools import cov_nearest
+import activation_functions as af
 
 @numba.njit(cache=True, fastmath=True, nogil=True)
 def solve_β_hat(X, Y):
@@ -249,55 +250,19 @@ def simulate_risks(X, ε, p, n, snr):
 @numba.njit(cache=True, fastmath=True, nogil=True)
 def check_pos_simidef(X):
     return np.all(np.linalg.eigvals(X) >= 0)
-  
-def simulations_lambda_mu(μ_array, λ_array, n_array, p_array, snr_array, σ, test_n,
-                         result_arr, progress, seed=None):
-    """
-    Simulate the test MSE and null risk for different values of λ, μ, n, p, snr.
 
-    Parameters
-    ----------
-    μ_array : array-like
-        Array of values for μ.
-    λ_array : array-like   
-        Array of values for λ.
-    n_array : array-like
-        Array of values for n.
-    p_array : array-like
-        Array of values for p.
-    snr_array : array-like
-        Array of values for snr.
-    σ : float
-        Standard deviation of the noise.
-    result_arr : array-like
-        Array to store the results.
-    progress : ProgressBar
-        Progress bar.
-    seed : int
-        Seed for the random number generator.
-    
-    Returns
-    -------
-    result_arr : array-like
-        Array of parameters and risks.
-    """
 
-    if seed is None:
-        raise ValueError('seed is None')
-    idx = 0
-    n = max(n_array)
-    max_p = max(p_array)
-    ε = compute_ε(σ, n+test_n, seed+1) 
-    for λ in λ_array:
-        for μ in μ_array:
-            X = compute_X(λ, μ, n+test_n, max_p, seed+2)
-            for snr in snr_array:
-                for p in p_array:
-                    params = λ, μ, p, n, snr
-                    result_arr[idx] = np.array([*params, simulate_risks(X, ε, p, n, snr)])
-                    idx += 1
-                    progress.update(1)
-    return result_arr
+def compute_X_nonlinear(X, activation):
+    if activation == 'abs':
+        return af.phi_abs(X)
+    elif activation == 'ReLU':
+        return af.phi_ReLU(X)
+    elif activation == 'tanh':
+        return af.phi_tanh(X)
+    elif activation == 'gaussian':
+        return af.phi_gaussian(X)
+    else:
+        raise ValueError('activation not recognized')
 
 def generate_symlog_points(n1, n2, L, U, a):
     """
@@ -337,8 +302,8 @@ def run_func_parameters(func, params, columns, seed=None, name=''):
     print("date and time =", dt_string)
     filename = f'results/Python/{name}results_[{dt_string}-{seed}].csv'
     total_com = 1
-    for parm in params:
-        total_com *= len(parm) if hasattr(parm,  '__len__') else 1
+    for param in params:
+        total_com *= len(param) if hasattr(param,  '__len__') and type(param) is not str else 1
     result_arr = np.zeros((total_com, len(columns)), dtype=np.float64)
     with ProgressBar(total=total_com) as progress:
         print(params)
