@@ -76,7 +76,7 @@ for (mu_val in unique(df$mu)){
 }
 
 
-file_name <- '/home/humphreyyang/code/benign-overfitting/results/Python/lambda_muresults_[30-09-2023_22:32:06-1239].csv'
+file_name <- 'results/Python/lambda_muresults_[30-09-2023_22:32:06-1239].csv'
 # file_name <- 'results/Python/lambda_muresults_[04-10-2023_18:58:28-1858].csv'
 df <- read.csv(file_name)
 colnames(df) <- c('lambda', 'mu', 'p', 'n', 'snr', 'MSE')
@@ -94,7 +94,7 @@ for (lambda_val in unique(df$lambda)){
     dev.off()
 }
 
-file_name <- 'results/Python/lambda_mu_quad_results_[12-10-2023_22:03:05-2025].csv'
+file_name <- 'results/Python/lambda_mu_quad_results_[19-10-2023_16:20:49-2025].csv'
 df <- read.csv(file_name)
 colnames(df) <- c('lambda', 'mu', 'p', 'n', 'snr', 'MSE')
 df$gamma <- df$p / df$n
@@ -113,7 +113,7 @@ for (mu_val in unique(df$mu)){
     dev.off()
 }
 
-file_name <- 'results/Python/lambda_mu_quad_results_[12-10-2023_22:03:11-2025].csv'
+file_name <- 'results/Python/lambda_mu_quad_results_[19-10-2023_16:27:50-2025].csv'
 df <- read.csv(file_name)
 colnames(df) <- c('lambda', 'mu', 'p', 'n', 'snr', 'MSE')
 df$gamma <- df$p / df$n
@@ -132,8 +132,46 @@ for (lambda_val in unique(df$lambda)){
     dev.off()
 }
 
+file_name <- 'results/Python/lambda_mu_abs_results_[19-10-2023_16:06:31-2025].csv'
+df <- read.csv(file_name)
+colnames(df) <- c('lambda', 'mu', 'p', 'n', 'snr', 'MSE')
+df$gamma <- df$p / df$n
+df <- df[order(df$gamma ),]
 
-file_name <- '/home/humphreyyang/code/benign-overfitting/results/Python/lambda_muresults_[30-09-2023_22:58:04-1239].csv'
+df$transformed_gamma <- symlog_transform(df$gamma)
+for (mu_val in unique(df$mu)){
+    df_mu = subset(df, mu == mu_val)
+    
+    # Open a PNG device
+    png(paste0("visualization/figures/", expression(mu), '_', round(mu_val, 2),'_abs', ".png"), width = 800, height = 800)
+
+    draw_plots(df_mu, 'mu')
+
+    # Close the PNG device
+    dev.off()
+}
+
+file_name <- 'results/Python/lambda_mu_abs_results_[19-10-2023_16:13:40-2025].csv'
+df <- read.csv(file_name)
+colnames(df) <- c('lambda', 'mu', 'p', 'n', 'snr', 'MSE')
+df$gamma <- df$p / df$n
+df <- df[order(df$gamma ),]
+
+df$transformed_gamma <- symlog_transform(df$gamma)
+for (lambda_val in unique(df$lambda)){
+    df_lambda = subset(df, lambda == lambda_val)
+      
+    # Open a PNG device
+    png(paste0("visualization/figures/", expression(lambda), '_', round(lambda_val, 2), '_abs', ".png"), width = 800, height = 800)
+    
+    draw_plots(df_lambda, 'lambda')
+    
+    # Close the PNG device
+    dev.off()
+}
+
+
+file_name <- 'results/Python/lambda_muresults_[30-09-2023_22:58:04-1239].csv'
 df <- read.csv(file_name)
 colnames(df) <- c('lambda', 'mu', 'p', 'n', 'snr', 'MSE')
 df$gamma <- df$p / df$n
@@ -154,7 +192,7 @@ for (lambda_val in unique(df$lambda)){
 }
 
 
-file_name <- '/home/humphreyyang/code/benign-overfitting/results/Python/compoundresults_[21-09-2023_11:19:07-1].csv'
+file_name <- 'results/Python/compoundresults_[21-09-2023_11:19:07-1].csv'
 df <- read.csv(file_name)
 colnames(df) <- c('rho', 'p', 'n', 'snr', 'MSE')
 df$gamma <- df$p / df$n
@@ -173,7 +211,7 @@ for (rho_val in unique(df$rho)){
 
 
 
-file_name <- '/home/humphreyyang/code/benign-overfitting/results/Python/compound_randomresults_[21-09-2023_11:47:41-1].csv'
+file_name <- 'results/Python/compound_randomresults_[21-09-2023_11:47:41-1].csv'
 df <- read.csv(file_name)
 colnames(df) <- c('rho', 'p', 'n', 'snr', 'MSE')
 df$gamma <- df$p / df$n
