@@ -22,6 +22,15 @@ def phi_abs(t):
     return a * (np.abs(t) - b)
 
 @numba.njit(cache=True, fastmath=True, nogil=True)
+def phi_quad(t):
+    """
+    at^2 + b
+    """
+    a = np.sqrt(np.pi / (np.pi - 2))
+    b = np.sqrt(2 / np.pi)
+    return a * np.square(t) + b
+
+@numba.njit(cache=True, fastmath=True, nogil=True)
 def phi_ReLU(t):
     """
     Rectified linear unit activation function.
@@ -68,3 +77,19 @@ def phi_gaussian(t):
     """
 
     return np.exp(-t**2)
+
+@numba.njit(cache=True, fastmath=True, nogil=True)
+def phi_sigmoid(t):
+    """
+    Sigmoid activation function.
+
+    Formula:
+    $\varphi_{\mathrm{sigmoid}}(t)=\frac{1}{1+\exp (-t)}$
+
+    Returns
+    -------
+    phi_sigmoid : function
+        Sigmoid activation function.
+    """
+
+    return 1 / (1 + np.exp(-t))

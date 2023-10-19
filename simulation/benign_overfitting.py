@@ -251,18 +251,32 @@ def simulate_risks(X, ε, p, n, snr):
 def check_pos_simidef(X):
     return np.all(np.linalg.eigvals(X) >= 0)
 
-
-def compute_X_nonlinear(X, activation):
-    if activation == 'abs':
-        return af.phi_abs(X)
-    elif activation == 'ReLU':
-        return af.phi_ReLU(X)
-    elif activation == 'tanh':
-        return af.phi_tanh(X)
-    elif activation == 'gaussian':
-        return af.phi_gaussian(X)
+def compute_X_nonlinear(λ, μ, n, p, ϕ, seed=None):
+    if ϕ == 'abs':
+        ϕ = af.phi_abs
+    elif ϕ == 'quad':
+        ϕ = af.phi_quad
     else:
-        raise ValueError('activation not recognized')
+        raise ValueError('Invalid activation function')
+        
+    U = generate_orthonormal_matrix(p)
+    V = generate_orthonormal_matrix(n)
+
+    Λ = np.diag(np.concatenate((np.array([λ]), np.ones(p-1))))
+    C = ((U @ Λ) @ U.T).real
+    A = np.diag(np.concatenate((np.array([μ]), np.ones(n-1))))
+    Γ = ((V @ A) @ V.T).real
+
+    np.random.seed(seed)
+
+    X = np.zeros((n, p))
+
+    for i in range(n):
+        z = np.random.normal(0, 1, p)
+        x_i = ϕ(C @ z)
+        X[i, :] = x_i
+        
+    return Γ @ X
 
 def generate_symlog_points(n1, n2, L, U, a):
     """

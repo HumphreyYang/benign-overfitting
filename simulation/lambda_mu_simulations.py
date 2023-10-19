@@ -58,10 +58,10 @@ def simulations_lambda_mu(μ_array, λ_array, n_array, p_array,
     ε = bo.compute_ε(σ, n+test_n, seed+1) 
     for λ in λ_array:
         for μ in μ_array:
-            X = bo.compute_X(λ, μ, n+test_n, max_p, seed+2)
-            print(activation_func)
             if activation_func != 'linear':
-                X = bo.compute_X_nonlinear(X, activation_func)
+                X = bo.compute_X_nonlinear(λ, μ, n+test_n, max_p, activation_func, seed+2)
+            else:
+                X = bo.compute_X(λ, μ, n+test_n, max_p, seed+2)
             for snr in snr_array:
                 for p in p_array:
                     params = λ, μ, p, n, snr
