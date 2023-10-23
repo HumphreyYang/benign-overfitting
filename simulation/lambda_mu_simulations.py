@@ -9,7 +9,8 @@ parser.add_argument('--mu', type=float, nargs='+', default=[1, 100, 200, 500], h
 parser.add_argument('--Lambda', type=float, nargs='+', default=[1], help='Array of lambda values.')
 parser.add_argument('--n1', type=int, default=30, help='Parameter n1 for symlog points before center point.')
 parser.add_argument('--n2', type=int, default=30, help='Parameter n2 for symlog points after center point.')
-parser.add_argument('--n_array', type=int, nargs='+', default=[200], help='Array of n values.')
+parser.add_argument('--val', type=int, nargs='+', default=[200], help='Value for Fixed Parameter.')
+parser.add_argument('--var', type=str, default='n', help='Which parameter will be fixed? p or n?')
 parser.add_argument('--snr', type=int, nargs='+', default=[1, 5, 4], help='Array of snr values.')
 parser.add_argument('--sigma', type=float, default=1.0, help='Sigma value.')
 parser.add_argument('--test_n', type=int, default=1000, help='Testing set size.')
@@ -53,21 +54,23 @@ def simulations_lambda_mu(μ_array, λ_array, n_array, p_array,
     if seed is None:
         raise ValueError('seed is None')
     idx = 0
-    n = max(n_array)
+    max_n = max(n_array)
     max_p = max(p_array)
-    ε = bo.compute_ε(σ, n+test_n, seed+1) 
+    ε = bo.compute_ε(σ, max_n+test_n, seed+1) 
     for λ in λ_array:
         for μ in μ_array:
-            if activation_func != 'linear':
-                X = bo.compute_X_nonlinear(λ, μ, n+test_n, max_p, activation_func, seed+2)
-            else:
-                X = bo.compute_X(λ, μ, n+test_n, max_p, seed+2)
-            for snr in snr_array:
-                for p in p_array:
-                    params = λ, μ, p, n, snr
-                    result_arr[idx] = np.array([*params, bo.simulate_risks(X, ε, p, n, snr)])
-                    idx += 1
-                    progress.update(1)
+                if activation_func != 'linear':
+                    X = bo.compute_X_nonlinear(λ, μ, max_n+test_n, max_p, activation_func, seed+2)
+                else:
+                    X = bo.compute_X(λ, μ, max_n+test_n, max_p, seed+2)
+                for snr in snr_array:
+                    for n in n_array:
+                        for p in p_array:
+                            params = λ, μ, p, n, snr
+                            result_arr[idx] = np.array([*params, 
+                                                        bo.simulate_risks(X, ε, p, n, max_n, snr)])
+                            idx += 1
+                            progress.update(1)
     return result_arr
 
 
@@ -94,8 +97,13 @@ def run_simulations_lambda_mu(parser):
     λ_array = np.array(args.Lambda)
     n1, n2 = args.n1, args.n2
     γ = bo.generate_symlog_points(n1, n2, 0.1, 10, 1)
-    n_array = np.array(args.n_array)
-    p_array = np.unique((γ * n_array).astype(int))
+
+    if args.var == 'n':
+        n_array = np.array(args.val)
+        p_array = np.unique((γ * n_array).astype(int))
+    elif args.var == 'p':
+        p_array = np.array(args.val)
+        n_array = np.unique((γ * p_array).astype(int))
     snr_array = np.linspace(args.snr[0], args.snr[1], args.snr[2])
     σ = args.sigma
     activation_func = args.activation
