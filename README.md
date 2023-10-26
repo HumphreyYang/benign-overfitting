@@ -1,6 +1,6 @@
 # Benign Overfitting in Linear Regression with Separable Sample Covariance Matrices
 
-This repo contains simulation files for an ongoing project on **Benign Overfitting in Linear Regression with Separable Sample Covariance Matrices**.
+This repo contains simulation files for an ongoing project on **Benign Overfitting in Linear Regression with Separable Sample Covariance Matrices** supervised by Professor Yanrong Yang and Professor Hanlin Shang.
 
 ## Environment Setup
 
@@ -32,11 +32,13 @@ To see the plots interactively, please run the `plot.ipynb` in `visualization` f
 
 Simulations are written in R and Python. The Python version uses Just-In-Time Compilor to speed up the simulation. The R version is also available. Both code are in the folder `simulation`.
 
-To run the simulation, change the parameter in the code and run
+To replicate our simulation, run
 
 ```bash
-python simulation/benign_overfitting_efficient.py
+sh run_simulation.sh
 ```
+
+Parameters can be changed in the file `run_simulation.sh`.
 
 `fastmath`  is used in the simulation code. To benefit from `fastmath`, please run
 
