@@ -61,6 +61,29 @@ def calculate_MSE(β_hat, β, X_test):
     pred_diff = X_test @ β_hat - X_test @ β
     return np.sum(pred_diff ** 2) / X_test.shape[0]
 
+@numba.njit(cache=True, fastmath=True, nogil=True)
+def calculate_MSE_Y(β_hat, Y_test, X_test):
+    """
+    Calculates the mean squared error of the prediction.
+
+    MSE = (1/n) ||X β_hat - X β||^2
+
+    Parameters
+    ----------
+    β_hat : array-like
+        Coefficient vector.
+    β : array-like
+        Ground truth coefficient vector.
+    X_test : array-like
+        Test data matrix for covariates.
+
+    Returns
+    -------
+    MSE : float
+    """
+    pred_diff = X_test @ β_hat - Y_test
+    return np.sum(pred_diff ** 2) / X_test.shape[0]
+
 def is_pos_semidef(X, ϵ=1e-5):
     return np.all(np.linalg.eigvals(X) >= -ϵ)
 
@@ -218,7 +241,7 @@ def compute_ε(σ, n, seed=None):
     return np.random.normal(0.0, σ, n)
 
 @numba.njit(cache=True, fastmath=True, nogil=True)
-def simulate_risks(X, ε, p, n, snr):
+def simulate_risks(X, ε, p, n, max_n, snr):
     """
     Fit the LS model and calculate the test MSE.
 
@@ -237,12 +260,10 @@ def simulate_risks(X, ε, p, n, snr):
         Array of parameters and risks.
     """
 
-    X_p = np.ascontiguousarray(X[:, :p])
     β = scale_norm(np.ones(p), snr)
-    Y = compute_Y(X_p, β, ε)
-    X_train = np.ascontiguousarray(X_p[:n, :])
-    X_test = np.ascontiguousarray(X_p[n:, :])
-    Y_train = Y[:n]
+    X_train = np.ascontiguousarray(X[:n, :p])
+    X_test = np.ascontiguousarray(X[max_n:, :p])
+    Y_train = compute_Y(X_train, β, ε)
     β_hat = solve_β_hat(X_train, Y_train)
     test_MSE = calculate_MSE(β_hat, β, X_test)
     return test_MSE

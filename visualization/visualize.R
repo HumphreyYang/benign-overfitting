@@ -6,9 +6,9 @@ symlog_transform <- function(x) {
   ifelse(x >= 1, log10(x), -log10(1 / x))
 }
 
-draw_plots <- function(df, title){
+draw_plots <- function(df, title, y_max=10, y_gap=5, lines=TRUE){
     # Initialize plot
-    plot(NULL, xlim = c(-1, 1), ylim = c(0, 10), 
+    plot(NULL, xlim = c(-1, 1), ylim = c(0, y_max), 
         xlab = expression(gamma), ylab = 'MSE', 
         xaxt = 'n', yaxt = 'n', xaxs = 'i', yaxs = 'i', 
         cex.lab = 1.25, cex.axis = 1.25)
@@ -16,7 +16,7 @@ draw_plots <- function(df, title){
     # Add custom axis
     axis(1, at = symlog_transform(c(0.1, 0.2, 0.5, 1, 2, 5, 10)), 
         labels = c(0.1, 0.2, 0.5, 1, 2, 5, 10))
-    axis(2, at = seq(0, 10, by = 5))
+    axis(2, at = seq(0, y_max, by = y_gap))
 
     # Add grid
     abline(v = symlog_transform(c(0.1, 0.2, 0.5, 1, 2, 5, 10)), col = 'grey', lty = 2)
@@ -38,7 +38,9 @@ draw_plots <- function(df, title){
         # Separate gamma into two ranges and apply linear spline interpolation
         sub_df_s <- subset(sub_df, gamma <= 1)
         sub_df_l <- subset(sub_df, gamma >= 1)
-        abline(h=snr_val, col = colors[i], lty = 2, lwd = 3)
+        if (lines){
+            abline(h=snr_val, col = colors[i], lty = 2, lwd = 3)
+        }
         
         for (sub_df in list(sub_df_s, sub_df_l)) {
         if (nrow(sub_df) > 1) {
@@ -176,8 +178,6 @@ df <- read.csv(file_name)
 colnames(df) <- c('lambda', 'mu', 'p', 'n', 'snr', 'MSE')
 df$gamma <- df$p / df$n
 
-print(df$gamma)
-
 df$transformed_gamma <- symlog_transform(df$gamma)
 for (lambda_val in unique(df$lambda)){
     df_lambda = subset(df, lambda == lambda_val)
@@ -223,6 +223,44 @@ for (rho_val in unique(df$rho)){
     # Open a PNG device
     png(paste0("visualization/figures/", 'random', expression(rho), '_', round(rho_val, 2), ".png"), width = 800, height = 800)
     draw_plots(df_rho, 'rho')
+    # Close the PNG device
+    dev.off()
+}
+
+file_name <- 'results/Python/lambda_mu_bias_linear_results_[24-10-2023_10:17:53-1655].csv'
+df <- read.csv(file_name)
+colnames(df) <- c('lambda', 'mu', 'p', 'n', 'snr', 'MSE')
+df$gamma <- df$p / df$n
+df <- df[order(df$gamma ),]
+df$transformed_gamma <- symlog_transform(df$gamma)
+for (mu_val in unique(df$mu)){
+    df_mu = subset(df, mu == mu_val)
+      
+    # Open a PNG device
+    png(paste0("visualization/figures/", expression(mu), '_', round(mu_val, 2), '_bias', ".png"), width = 800, height = 800)
+
+    draw_plots(df_mu, 'mu')
+    # Close the PNG device
+    dev.off()
+}
+
+
+file_name <- 'results/Python/lambda_mu_bias_linear_results_[24-10-2023_10:26:16-1858].csv'
+df <- read.csv(file_name)
+colnames(df) <- c('lambda', 'mu', 'p', 'n', 'snr', 'MSE')
+df$gamma <- df$p / df$n
+
+print(df)
+
+df$transformed_gamma <- symlog_transform(df$gamma)
+for (lambda_val in unique(df$lambda)){
+    df_lambda = subset(df, lambda == lambda_val)
+      
+    # Open a PNG device
+    png(paste0("visualization/figures/", expression(lambda), '_', round(lambda_val, 2), "_bias", ".png"), width = 800, height = 800)
+    
+    draw_plots(df_lambda, 'lambda', y_max=500, y_gap=100, lines=FALSE)
+    
     # Close the PNG device
     dev.off()
 }
