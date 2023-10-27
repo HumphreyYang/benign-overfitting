@@ -239,7 +239,7 @@ for (mu_val in unique(df$mu)){
     # Open a PNG device
     png(paste0("visualization/figures/", expression(mu), '_', round(mu_val, 2), '_bias', ".png"), width = 800, height = 800)
 
-    draw_plots(df_mu, 'mu')
+    draw_plots(df_mu, 'mu', lines=TRUE)
     # Close the PNG device
     dev.off()
 }
