@@ -14,13 +14,14 @@ parser.add_argument('--var', type=str, default='n', help='Which parameter will b
 parser.add_argument('--snr', type=int, nargs='+', default=[1, 5, 4], help='Array of snr values.')
 parser.add_argument('--sigma', type=float, default=1.0, help='Sigma value.')
 parser.add_argument('--test_n', type=int, default=1000, help='Testing set size.')
+parser.add_argument('--n_iter', type=int, default=1000, help='Number of iterations to run')
 parser.add_argument('--activation', type=str, default='linear', help='Activation function for nonlinear cases')
 parser.add_argument('--seed', type=int, default=1, help='Random seed.')
 
 
 def simulations_lambda_mu(μ_array, λ_array, n_array, p_array, 
-                          snr_array, σ, test_n, activation_func,
-                          result_arr, progress, seed=None):
+                          snr_array, σ, test_n, activation_func, 
+                          n_iter, result_arr, progress, seed=None):
     """
     Simulate the test MSE and null risk for different values of λ, μ, n, p, snr.
 
@@ -53,20 +54,25 @@ def simulations_lambda_mu(μ_array, λ_array, n_array, p_array,
 
     if seed is None:
         raise ValueError('seed is None')
+
+    np.random.seed(seed)
+    seed_array = np.random.randint(1, 100_000_000, n_iter)
+
     idx = 0
     max_n = max(n_array)
     max_p = max(p_array)
-    ε = bo.compute_ε(σ, max_n+test_n, seed+1) 
-    for λ in λ_array:
-        for μ in μ_array:
+    ε = bo.compute_ε(σ, max_n, seed+1) 
+    for seed in seed_array:
+        for λ in λ_array:
+            for μ in μ_array:
                 if activation_func != 'linear':
-                    X = bo.compute_X_nonlinear(λ, μ, max_n+test_n, max_p, activation_func, seed+2)
+                    X = bo.compute_X_nonlinear(λ, μ, max_n+test_n, max_p, activation_func, seed)
                 else:
-                    X = bo.compute_X(λ, μ, max_n+test_n, max_p, seed+2)
+                    X = bo.compute_X(λ, μ, max_n+test_n, max_p, seed)
                 for snr in snr_array:
                     for n in n_array:
                         for p in p_array:
-                            params = λ, μ, p, n, snr
+                            params = λ, μ, p, n, snr, seed
                             result_arr[idx] = np.array([*params, 
                                                         bo.simulate_risks(X, ε, p, n, max_n, snr)])
                             idx += 1
@@ -108,6 +114,7 @@ def run_simulations_lambda_mu(parser):
     σ = args.sigma
     activation_func = args.activation
     test_n = args.test_n
+    n_iter = args.n_iter
     seed = args.seed
 
     print('Running Simulations')
@@ -119,10 +126,12 @@ def run_simulations_lambda_mu(parser):
     print(f'σ: {σ}')
     print(f'seed: {seed}')
 
-    params = μ_array, λ_array, n_array, p_array, snr_array, σ, test_n, activation_func
+    params = μ_array, λ_array, n_array, p_array, snr_array, σ, test_n, activation_func, n_iter
     bo.run_func_parameters(simulations_lambda_mu, params, 
-                        ['λ', 'μ', 'p', 'n', 'snr', 'MSE'],
+                        ['λ', 'μ', 'p', 'n', 'snr', 'n_iter', 'MSE'],
                         seed=seed, name=f'lambda_mu_{activation_func}_')
     
 if __name__ == '__main__':
-    run_simulations_lambda_mu(parser)
+    file_location = run_simulations_lambda_mu(parser)
+    print(f'Results written in {file_location}')
+    bo.average_iterations(file_location)

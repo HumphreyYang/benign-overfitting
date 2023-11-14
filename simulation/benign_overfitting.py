@@ -174,6 +174,7 @@ def generate_orthonormal_matrix(dim):
     res, _ = np.linalg.qr(a)
     return np.ascontiguousarray(res)
 
+@numba.njit(cache=True, fastmath=True, nogil=True)
 def compute_X(λ, μ, n, p, seed=None):
     """
     Generate X = Γ Z C, where Z is a n x p matrix of iid standard normal 
@@ -335,10 +336,12 @@ def run_func_parameters(func, params, columns, seed=None, name=''):
     now = datetime.now()
     dt_string = now.strftime("%d-%m-%Y_%H:%M:%S")
     print("date and time =", dt_string)
+    print(columns)
     filename = f'results/Python/{name}results_[{dt_string}-{seed}].csv'
     total_com = 1
     for param in params:
         total_com *= len(param) if hasattr(param,  '__len__') and type(param) is not str else 1
+    total_com = total_com * params[-1]
     result_arr = np.zeros((total_com, len(columns)), dtype=np.float64)
     with ProgressBar(total=total_com) as progress:
         print(params)
@@ -347,3 +350,10 @@ def run_func_parameters(func, params, columns, seed=None, name=''):
     df.to_csv(filename, index=False)
     print(time.time()-start_time)
     print('Finished Runing Simulations')
+
+    return filename
+
+def average_iterations(filename):
+    df = pd.read_csv(filename)
+    df = df.groupby(['λ', 'μ', 'p', 'n', 'snr']).mean().reset_index()
+    df.to_csv(filename.split('.')[0]+'averaged', index=False)
