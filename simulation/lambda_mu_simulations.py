@@ -133,5 +133,3 @@ def run_simulations_lambda_mu(parser):
     
 if __name__ == '__main__':
     file_location = run_simulations_lambda_mu(parser)
-    print(f'Results written in {file_location}')
-    bo.average_iterations(file_location)

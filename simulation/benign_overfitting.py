@@ -174,7 +174,6 @@ def generate_orthonormal_matrix(dim):
     res, _ = np.linalg.qr(a)
     return np.ascontiguousarray(res)
 
-@numba.njit(cache=True, fastmath=True, nogil=True)
 def compute_X(λ, μ, n, p, seed=None):
     """
     Generate X = Γ Z C, where Z is a n x p matrix of iid standard normal 
@@ -331,13 +330,20 @@ def generate_symlog_points(n1, n2, L, U, a):
     
     return symlog_points
 
+def average_iterations(filename):
+    print(filename)
+    df = pd.read_csv(filename+'.csv')
+    df = df.groupby(['λ', 'μ', 'p', 'n', 'snr']).mean().reset_index()
+    df.to_csv(filename+'_average.csv', index=False)
+
 def run_func_parameters(func, params, columns, seed=None, name=''):
     start_time = time.time()
     now = datetime.now()
     dt_string = now.strftime("%d-%m-%Y_%H:%M:%S")
     print("date and time =", dt_string)
     print(columns)
-    filename = f'results/Python/{name}results_[{dt_string}-{seed}].csv'
+    filename = f'results/Python/{name}results_[{dt_string}-{seed}]'
+    print(filename)
     total_com = 1
     for param in params:
         total_com *= len(param) if hasattr(param,  '__len__') and type(param) is not str else 1
@@ -347,13 +353,10 @@ def run_func_parameters(func, params, columns, seed=None, name=''):
         print(params)
         result_arr = func(*params, result_arr, progress, seed=seed)
     df = pd.DataFrame(result_arr, columns=columns)
-    df.to_csv(filename, index=False)
+    df.to_csv(filename+'.csv', index=False)
     print(time.time()-start_time)
     print('Finished Runing Simulations')
 
-    return filename
+    print(filename)
 
-def average_iterations(filename):
-    df = pd.read_csv(filename)
-    df = df.groupby(['λ', 'μ', 'p', 'n', 'snr']).mean().reset_index()
-    df.to_csv(filename.split('.')[0]+'averaged', index=False)
+    average_iterations(filename)

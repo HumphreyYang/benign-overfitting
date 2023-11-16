@@ -63,11 +63,12 @@ draw_plots <- function(df, title, y_max=10, y_gap=5, lines=TRUE){
     }
 }
 
-file_name <- 'results/Python/lambda_muresults_[04-10-2023_16:55:21-1655].csv'
+file_name <- 'results/Python/lambda_mu_linear_results_[14-11-2023_16:48:30-16]_average.csv'
 df <- read.csv(file_name)
-colnames(df) <- c('lambda', 'mu', 'p', 'n', 'snr', 'MSE')
+colnames(df) <- c('lambda', 'mu', 'p', 'n', 'snr', 'n_iter', 'MSE')
 df$gamma <- df$p / df$n
 df <- df[order(df$gamma ),]
+print(df)
 df$transformed_gamma <- symlog_transform(df$gamma)
 for (mu_val in unique(df$mu)){
     df_mu = subset(df, mu == mu_val)
