@@ -66,7 +66,7 @@ def simulations_lambda_mu(μ_array, λ_array, n_array, p_array, true_p,
             else:
                 X = bo.compute_X(λ, μ, max_n+test_n, max_p, seed+2)
             for snr in snr_array:
-                β = bo.scale_norm(np.ones(true_p), τ)
+                β = bo.scale_norm(np.ones(true_p), snr)
                 Y = bo.compute_Y(
                     np.ascontiguousarray(X[:, :true_p]), 
                     β, ε)
@@ -140,7 +140,7 @@ def run_simulations_lambda_mu(parser):
     print(f'seed: {seed}')
 
     params = (μ_array, λ_array, n_array, p_array, 
-              true_p, τ_array, σ, test_n, activation_func)
+              true_p, τ_array, snr_array, σ, test_n, activation_func)
     bo.run_func_parameters(simulations_lambda_mu, params, 
                         ['λ', 'μ', 'p', 'true_p', 'n', 'tau', 'snr', 'MSE'],
                         seed=seed, name=f'ridge_bias_{activation_func}_')
