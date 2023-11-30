@@ -12,6 +12,7 @@ parser.add_argument('--n2', type=int, default=30, help='Parameter n2 for symlog 
 parser.add_argument('--val', type=int, nargs='+', default=[200], help='Value for Fixed Parameter.')
 parser.add_argument('--var', type=str, default='n', help='Which parameter will be fixed? p or n?')
 parser.add_argument('--true_p', type=int, default=100, help='True number of predictors.')
+parser.add_argument('--tau', type=int, nargs='+', default=[1, 5, 4], help='Array of τ values.')
 parser.add_argument('--snr', type=int, nargs='+', default=[1, 5, 4], help='Array of snr values.')
 parser.add_argument('--sigma', type=float, default=1.0, help='Sigma value.')
 parser.add_argument('--test_n', type=int, default=1000, help='Testing set size.')
@@ -20,10 +21,10 @@ parser.add_argument('--seed', type=int, default=1, help='Random seed.')
 
 
 def simulations_lambda_mu(μ_array, λ_array, n_array, p_array, true_p,
-                          snr_array, σ, test_n, activation_func,
+                          τ_array, snr_array, σ, test_n, activation_func,
                           result_arr, progress, seed=None):
     """
-    Simulate the test MSE and null risk for different values of λ, μ, n, p, snr.
+    Simulate the test MSE and null risk for different values of λ, μ, n, p, τ.
 
     Parameters
     ----------
@@ -35,8 +36,8 @@ def simulations_lambda_mu(μ_array, λ_array, n_array, p_array, true_p,
         Array of values for n.
     p_array : array-like
         Array of values for p.
-    snr_array : array-like
-        Array of values for snr.
+    τ_array : array-like
+        Array of values for τ.
     σ : float
         Standard deviation of the noise.
     result_arr : array-like
@@ -65,25 +66,26 @@ def simulations_lambda_mu(μ_array, λ_array, n_array, p_array, true_p,
             else:
                 X = bo.compute_X(λ, μ, max_n+test_n, max_p, seed+2)
             for snr in snr_array:
-                β = bo.scale_norm(np.ones(true_p), snr)
+                β = bo.scale_norm(np.ones(true_p), τ)
                 Y = bo.compute_Y(
                     np.ascontiguousarray(X[:, :true_p]), 
                     β, ε)
-                
+
                 for n in n_array:
                     for p in p_array:
-                        params = λ, μ, p, true_p, n, snr
+                        for τ in τ_array:
+                            params = λ, μ, p, true_p, n, τ, snr
 
-                        X_train = np.ascontiguousarray(X[:n, :p])
-                        X_test = np.ascontiguousarray(X[max_n:, :p])
-                        Y_train = np.ascontiguousarray(Y[:n])
-                        Y_test = np.ascontiguousarray(Y[max_n:])
-                        β_hat = bo.solve_β_hat(X_train, Y_train)
-                        print(params)
-                        result_arr[idx] = np.array([*params, 
-                                                    bo.calculate_MSE_Y(β_hat, Y_test, X_test)])
-                        idx += 1
-                        progress.update(1)
+                            X_train = np.ascontiguousarray(X[:n, :p])
+                            X_test = np.ascontiguousarray(X[max_n:, :p])
+                            Y_train = np.ascontiguousarray(Y[:n])
+                            Y_test = np.ascontiguousarray(Y[max_n:])
+                            β_hat = bo.solve_β_hat(X_train, Y_train, τ)
+
+                            result_arr[idx] = np.array([*params, 
+                                                        bo.calculate_MSE_Y(β_hat, Y_test, X_test)])
+                            idx += 1
+                            progress.update(1)
     return result_arr
 
 
@@ -118,6 +120,8 @@ def run_simulations_lambda_mu(parser):
         p_array = np.array(args.val)
         n_array = np.unique((γ * p_array).astype(int))
     true_p = args.true_p
+    τ_array = np.arange(-args.tau[0], -args.tau[1], -args.tau[2])
+    τ_array = np.exp(np.concatenate((τ_array, np.array([np.inf]))))
     snr_array = np.linspace(args.snr[0], args.snr[1], args.snr[2])
     σ = args.sigma
     activation_func = args.activation
@@ -129,16 +133,17 @@ def run_simulations_lambda_mu(parser):
     print(f'λ_array: {λ_array}')
     print(f'n_array: {n_array}')
     print(f'p_array: {p_array}')
-    print(f'snr_array: {snr_array}')
+    print(f'τ_array: {τ_array}')
     print(f'true_p: {true_p}')
+    print(f'snr_array: {snr_array}')
     print(f'σ: {σ}')
     print(f'seed: {seed}')
 
     params = (μ_array, λ_array, n_array, p_array, 
-              true_p, snr_array, σ, test_n, activation_func)
+              true_p, τ_array, σ, test_n, activation_func)
     bo.run_func_parameters(simulations_lambda_mu, params, 
-                        ['λ', 'μ', 'p', 'true_p', 'n', 'snr', 'MSE'],
-                        seed=seed, name=f'lambda_mu_bias_{activation_func}_{true_p}_')
+                        ['λ', 'μ', 'p', 'true_p', 'n', 'tau', 'snr', 'MSE'],
+                        seed=seed, name=f'ridge_bias_{activation_func}_')
     
 if __name__ == '__main__':
     run_simulations_lambda_mu(parser)

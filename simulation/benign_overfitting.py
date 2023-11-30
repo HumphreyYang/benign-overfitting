@@ -15,12 +15,12 @@ from statsmodels.stats.correlation_tools import cov_nearest
 import activation_functions as af
 
 @numba.njit(cache=True, fastmath=True, nogil=True)
-def solve_β_hat(X, Y):
+def solve_β_hat(X, Y, τ=0):
     """
     Solves the least squares problem using the Moore-Penrose pseudoinverse.
 
-    β_hat = (X^T X)^{+} X^T Y    
-
+    β_hat = (X^T X + nτI)^{+} X^T Y    
+    
     Parameters
     ----------
     X : array-like
@@ -35,7 +35,9 @@ def solve_β_hat(X, Y):
     """
 
     XTX = X.T @ X
-    β_hat = np.linalg.pinv(XTX) @ X.T @ Y
+    n = X.shape[0]
+    I = np.eye(X.shape[1])
+    β_hat = np.linalg.pinv(XTX + n*τ*I) @ X.T @ Y
     return β_hat
 
 @numba.njit(cache=True, fastmath=True, nogil=True)
@@ -347,7 +349,7 @@ def run_func_parameters(func, params, columns, seed=None, name=''):
     total_com = 1
     for param in params:
         total_com *= len(param) if hasattr(param,  '__len__') and type(param) is not str else 1
-    total_com = total_com * params[-1]
+    print((total_com, len(columns)))
     result_arr = np.zeros((total_com, len(columns)), dtype=np.float64)
     with ProgressBar(total=total_com) as progress:
         print(params)
