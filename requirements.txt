@@ -1,7 +1,7 @@
 ipython==8.10.0
 ipywidgets==8.1.0
 matplotlib==3.7.0
-numba==0.58.0
+numba==0.56.4
 numpy==1.23.5
 pandas==1.5.3
 scipy==1.10.0

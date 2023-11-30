@@ -14,7 +14,6 @@ from collections.abc import Iterable
 from statsmodels.stats.correlation_tools import cov_nearest
 import activation_functions as af
 
-@numba.njit(cache=True, fastmath=True, nogil=True)
 def solve_β_hat(X, Y, τ=0):
     """
     Solves the least squares problem using the Moore-Penrose pseudoinverse.
@@ -242,8 +241,7 @@ def compute_ε(σ, n, seed=None):
     np.random.seed(seed)
     return np.random.normal(0.0, σ, n)
 
-@numba.njit(cache=True, fastmath=True, nogil=True)
-def simulate_risks(X, ε, p, n, max_n, snr):
+def simulate_risks(X, ε, p, n, max_n, τ, snr):
     """
     Fit the LS model and calculate the test MSE.
 
@@ -266,7 +264,7 @@ def simulate_risks(X, ε, p, n, max_n, snr):
     X_train = np.ascontiguousarray(X[:n, :p])
     X_test = np.ascontiguousarray(X[max_n:, :p])
     Y_train = compute_Y(X_train, β, ε)
-    β_hat = solve_β_hat(X_train, Y_train)
+    β_hat = solve_β_hat(X_train, Y_train, τ)
     test_MSE = calculate_MSE(β_hat, β, X_test)
     return test_MSE
 
@@ -361,4 +359,4 @@ def run_func_parameters(func, params, columns, seed=None, name=''):
 
     print(filename)
 
-    average_iterations(filename)
+    # average_iterations(filename)

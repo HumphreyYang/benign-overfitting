@@ -11,6 +11,7 @@ parser.add_argument('--n1', type=int, default=30, help='Parameter n1 for symlog 
 parser.add_argument('--n2', type=int, default=30, help='Parameter n2 for symlog points after center point.')
 parser.add_argument('--val', type=int, nargs='+', default=[200], help='Value for Fixed Parameter.')
 parser.add_argument('--var', type=str, default='n', help='Which parameter will be fixed? p or n?')
+parser.add_argument('--tau', type=int, nargs='+', default=[0], help='Array of τ values.')
 parser.add_argument('--snr', type=int, nargs='+', default=[1, 5, 4], help='Array of snr values.')
 parser.add_argument('--sigma', type=float, default=1.0, help='Sigma value.')
 parser.add_argument('--test_n', type=int, default=1000, help='Testing set size.')
@@ -19,7 +20,7 @@ parser.add_argument('--seed', type=int, default=1, help='Random seed.')
 
 
 def simulations_lambda_mu(μ_array, λ_array, n_array, p_array, 
-                          snr_array, σ, test_n, activation_func,
+                          τ_array, snr_array, σ, test_n, activation_func,
                           result_arr, progress, seed=None):
     """
     Simulate the test MSE and null risk for different values of λ, μ, n, p, snr.
@@ -67,11 +68,12 @@ def simulations_lambda_mu(μ_array, λ_array, n_array, p_array,
             for snr in snr_array:
                 for n in n_array:
                     for p in p_array:
-                        params = λ, μ, p, n, snr
-                        result_arr[idx] = np.array([*params, 
-                                                    bo.simulate_risks(X, ε, p, n, max_n, snr)])
-                        idx += 1
-                        progress.update(1)
+                        for τ in τ_array:
+                            params = λ, μ, p, n, τ, snr
+                            result_arr[idx] = np.array([*params, 
+                                                        bo.simulate_risks(X, ε, p, n, max_n, τ, snr)])
+                            idx += 1
+                            progress.update(1)
     return result_arr
 
 
@@ -105,6 +107,11 @@ def run_simulations_lambda_mu(parser):
     elif args.var == 'p':
         p_array = np.array(args.val)
         n_array = np.unique((γ * p_array).astype(int))
+    if len(args.tau) < 3:
+        print('Fitting Ridgeless Least-squares')
+        τ_array = np.array([0])
+    else:
+        τ_array = np.arange(-args.tau[0], -args.tau[1], -args.tau[2])
     snr_array = np.linspace(args.snr[0], args.snr[1], args.snr[2])
     σ = args.sigma
     activation_func = args.activation
@@ -116,13 +123,14 @@ def run_simulations_lambda_mu(parser):
     print(f'λ_array: {λ_array}')
     print(f'n_array: {n_array}')
     print(f'p_array: {p_array}')
+    print(f'τ_array: {τ_array}')
     print(f'snr_array: {snr_array}')
     print(f'σ: {σ}')
     print(f'seed: {seed}')
 
-    params = μ_array, λ_array, n_array, p_array, snr_array, σ, test_n, activation_func
+    params = μ_array, λ_array, n_array, p_array, τ_array, snr_array, σ, test_n, activation_func
     bo.run_func_parameters(simulations_lambda_mu, params, 
-                        ['λ', 'μ', 'p', 'n', 'snr', 'MSE'],
+                        ['λ', 'μ', 'p', 'n', 'tau', 'snr', 'MSE'],
                         seed=seed, name=f'lambda_mu_{activation_func}_')
     
 if __name__ == '__main__':
