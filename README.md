@@ -2,6 +2,8 @@
 
 This repo contains simulation files for an ongoing project on **Benign Overfitting in Linear Regression with Separable Sample Covariance Matrices** supervised by Professor Yanrong Yang and Professor Hanlin Shang.
 
+There are delays in the documentation of the project due to active development. We will update the documentation once experiments are finalized.
+
 ## Environment Setup
 
 To set up the environment, run
