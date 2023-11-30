@@ -34,9 +34,12 @@ def solve_β_hat(X, Y, τ=0):
     """
 
     XTX = X.T @ X
-    n = X.shape[0]
-    I = np.eye(X.shape[1])
-    β_hat = np.linalg.pinv(XTX + n*τ*I) @ X.T @ Y
+    if τ == 0:
+        β_hat = np.linalg.pinv(XTX) @ X.T @ Y
+    else:
+        n = X.shape[0]
+        I = np.eye(X.shape[1])
+        β_hat = np.linalg.inv(XTX + n*τ*I) @ X.T @ Y
     return β_hat
 
 @numba.njit(cache=True, fastmath=True, nogil=True)
