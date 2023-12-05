@@ -12,7 +12,8 @@ parser.add_argument('--n2', type=int, default=30, help='Parameter n2 for symlog 
 parser.add_argument('--val', type=int, nargs='+', default=[200], help='Value for Fixed Parameter.')
 parser.add_argument('--var', type=str, default='n', help='Which parameter will be fixed? p or n?')
 parser.add_argument('--true_p', type=int, default=100, help='True number of predictors.')
-parser.add_argument('--tau', type=int, nargs='+', default=[0], help='Array of τ values.')
+parser.add_argument('--tau', type=float, nargs='+', default=[0], help='Array of τ values.')
+parser.add_argument('--opt_tau', type=float, nargs='+', default=[], help='Array of τ values.')
 parser.add_argument('--snr', type=int, nargs='+', default=[1, 5, 4], help='Array of snr values.')
 parser.add_argument('--sigma', type=float, default=1.0, help='Sigma value.')
 parser.add_argument('--test_n', type=int, default=1000, help='Testing set size.')
@@ -70,7 +71,6 @@ def simulations_lambda_mu(μ_array, λ_array, n_array, p_array, true_p,
                 Y = bo.compute_Y(
                     np.ascontiguousarray(X[:, :true_p]), 
                     β, ε)
-
                 for n in n_array:
                     for p in p_array:
                         for τ in τ_array:
@@ -124,7 +124,9 @@ def run_simulations_lambda_mu(parser):
         print('Fitting Ridgeless Least-squares')
         τ_array = np.array([0])
     else:
-        τ_array = np.arange(-args.tau[0], -args.tau[1], -args.tau[2])
+        τ_array = np.arange(args.tau[0], args.tau[1], args.tau[2])
+    if len(args.opt_tau) != 0:
+        np.append(τ_array, args.opt_tau)
     snr_array = np.linspace(args.snr[0], args.snr[1], args.snr[2])
     σ = args.sigma
     activation_func = args.activation

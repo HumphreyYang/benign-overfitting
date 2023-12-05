@@ -88,6 +88,50 @@ def calculate_MSE_Y(β_hat, Y_test, X_test):
     pred_diff = X_test @ β_hat - Y_test
     return np.sum(pred_diff ** 2) / X_test.shape[0]
 
+@numba.njit(cache=True, fastmath=True, nogil=True)
+def GCV(X, XTX, Y, τ):
+    """
+    Calculates the generalized cross-validation score.
+
+    GCV = {\mathrm{GCV}}_{n}(τ)={\frac{y^{T}(I-S_{τ})^{2}y/n}{(1-\operatorname{Tr}(S_{\lambda})/n)^{2}}}.
+
+    Parameters
+    ----------
+    β_hat : array-like
+        Coefficient vector.
+    X : array-like
+        Data matrix for covariates.
+    Y : array-like
+        Array for response variable.
+    λ : float
+        Regularization parameter.
+
+    Returns
+    -------
+    GCV : float
+    """
+    n = X.shape[0]
+    S_τ = X @ np.linalg.inv(XTX+n*τ) @ X.T
+    trace = np.trace(S_τ)
+    I = np.eye(X.shape[0])
+
+    return (Y.T @ (I - S_τ) @ Y/n) / (1 - trace/n)**2
+
+@numba.njit(cache=True, fastmath=True, nogil=True)
+def find_optimal_tau(X, Y, τ_range):
+    optimal_τ = None
+    lowest_GCV = np.inf
+
+    XTX = X.T @ X  # Pre-compute XTX
+
+    for τ in τ_range:
+        GCV_score = GCV(X, XTX, Y, τ)
+        if GCV_score < lowest_GCV:
+            lowest_GCV = GCV_score
+            optimal_τ = τ
+
+    return optimal_τ, lowest_GCV
+
 def is_pos_semidef(X, ϵ=1e-5):
     return np.all(np.linalg.eigvals(X) >= -ϵ)
 
