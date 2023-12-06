@@ -13,6 +13,7 @@ import argparse
 from collections.abc import Iterable
 from statsmodels.stats.correlation_tools import cov_nearest
 import activation_functions as af
+from sklearn.linear_model import RidgeCV
 
 def solve_β_hat(X, Y, τ=0):
     """
@@ -43,7 +44,7 @@ def solve_β_hat(X, Y, τ=0):
     return β_hat
 
 @numba.njit(cache=True, fastmath=True, nogil=True)
-def calculate_MSE(β_hat, β, X_test):
+def calculate_MSE(β_hat, X_test, Y_test=None, β=None):
     """
     Calculates the mean squared error of the prediction.
 
@@ -62,75 +63,44 @@ def calculate_MSE(β_hat, β, X_test):
     -------
     MSE : float
     """
-    pred_diff = X_test @ β_hat - X_test @ β
-    return np.sum(pred_diff ** 2) / X_test.shape[0]
-
-@numba.njit(cache=True, fastmath=True, nogil=True)
-def calculate_MSE_Y(β_hat, Y_test, X_test):
-    """
-    Calculates the mean squared error of the prediction.
-
-    MSE = (1/n) ||X β_hat - X β||^2
-
-    Parameters
-    ----------
-    β_hat : array-like
-        Coefficient vector.
-    β : array-like
-        Ground truth coefficient vector.
-    X_test : array-like
-        Test data matrix for covariates.
-
-    Returns
-    -------
-    MSE : float
-    """
+    if Y_test is None:
+        if β is None:
+            raise ValueError('β and Y cannot both be None')
+        Y_test = X_test @ β
     pred_diff = X_test @ β_hat - Y_test
     return np.sum(pred_diff ** 2) / X_test.shape[0]
 
-@numba.njit(cache=True, fastmath=True, nogil=True)
-def GCV(X, XTX, Y, τ):
-    """
-    Calculates the generalized cross-validation score.
+def calculate_gcv(X, Y, τ):
+    n, p = X.shape
+    I = np.identity(p)
+    
+    # Ridge regression coefficient estimation
+    beta = solve_β_hat(X, Y, τ)
+    
+    Y_pred = X @ beta
+    
+    # Smoother matrix
+    S = X @ np.linalg.inv(X.T @ X + n * τ * I) @ X.T
+    
+    # Trace of smoother matrix
+    trace_S = np.trace(S)
+    
+    # Calculate gcv
+    gcv = np.sum((Y - Y_pred) ** 2) / ((1 - trace_S / n) ** 2)
+    
+    return gcv / n
 
-    GCV = {\mathrm{GCV}}_{n}(τ)={\frac{y^{T}(I-S_{τ})^{2}y/n}{(1-\operatorname{Tr}(S_{\lambda})/n)^{2}}}.
-
-    Parameters
-    ----------
-    β_hat : array-like
-        Coefficient vector.
-    X : array-like
-        Data matrix for covariates.
-    Y : array-like
-        Array for response variable.
-    λ : float
-        Regularization parameter.
-
-    Returns
-    -------
-    GCV : float
-    """
-    n = X.shape[0]
-    S_τ = X @ np.linalg.inv(XTX+n*τ) @ X.T
-    trace = np.trace(S_τ)
-    I = np.eye(X.shape[0])
-
-    return (Y.T @ (I - S_τ) @ Y/n) / (1 - trace/n)**2
-
-@numba.njit(cache=True, fastmath=True, nogil=True)
-def find_optimal_tau(X, Y, τ_range):
+def find_optimal_tau(X, Y, τ_grid):
     optimal_τ = None
-    lowest_GCV = np.inf
+    lowest_gcv = np.inf
 
-    XTX = X.T @ X  # Pre-compute XTX
-
-    for τ in τ_range:
-        GCV_score = GCV(X, XTX, Y, τ)
-        if GCV_score < lowest_GCV:
-            lowest_GCV = GCV_score
+    for τ in τ_grid:
+        gcv_score = calculate_gcv(X, Y, τ)
+        if gcv_score < lowest_gcv:
+            lowest_gcv = gcv_score
             optimal_τ = τ
 
-    return optimal_τ, lowest_GCV
+    return optimal_τ, lowest_gcv
 
 def is_pos_semidef(X, ϵ=1e-5):
     return np.all(np.linalg.eigvals(X) >= -ϵ)
@@ -392,12 +362,11 @@ def run_func_parameters(func, params, columns, seed=None, name=''):
     filename = f'results/Python/{name}results_[{dt_string}-{seed}]'
     print(filename)
     total_com = 1
-    for param in params:
+    for param in params[:len(columns)-1]:
         total_com *= len(param) if hasattr(param,  '__len__') and type(param) is not str else 1
     print((total_com, len(columns)))
     result_arr = np.zeros((total_com, len(columns)), dtype=np.float64)
     with ProgressBar(total=total_com) as progress:
-        print(params)
         result_arr = func(*params, result_arr, progress, seed=seed)
     df = pd.DataFrame(result_arr, columns=columns)
     df.to_csv(filename+'.csv', index=False)
