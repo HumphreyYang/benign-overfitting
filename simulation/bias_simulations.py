@@ -153,11 +153,16 @@ def run_simulations_lambda_mu(parser):
     print(f'σ: {σ}')
     print(f'seed: {seed}')
 
+    if len(τ_array) > 0:
+        name = f'ridge_bias_{activation_func}_'
+    else:
+        name = f'ridgeless_bias_{activation_func}_'
+
     params = (μ_array, λ_array, n_array, p_array, 
               true_p, τ_array, snr_array, τ_grid, σ, test_n, activation_func)
     bo.run_func_parameters(simulations_lambda_mu, params, 
                         ['λ', 'μ', 'p', 'true_p', 'n', 'tau', 'snr', 'MSE'],
-                        seed=seed, name=f'ridge_bias_{activation_func}_')
+                        seed=seed, name=name)
     
 if __name__ == '__main__':
     run_simulations_lambda_mu(parser)

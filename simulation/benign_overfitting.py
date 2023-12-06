@@ -13,8 +13,8 @@ import argparse
 from collections.abc import Iterable
 from statsmodels.stats.correlation_tools import cov_nearest
 import activation_functions as af
-from sklearn.linear_model import RidgeCV
 
+@numba.njit(cache=True, fastmath=True, nogil=True)
 def solve_β_hat(X, Y, τ=0):
     """
     Solves the least squares problem using the Moore-Penrose pseudoinverse.
@@ -70,7 +70,8 @@ def calculate_MSE(β_hat, X_test, Y_test=None, β=None):
     pred_diff = X_test @ β_hat - Y_test
     return np.sum(pred_diff ** 2) / X_test.shape[0]
 
-def calculate_gcv(X, Y, τ):
+@numba.njit(cache=True, fastmath=True, nogil=True)
+def calculate_gcv(X, XTX, Y, τ):
     n, p = X.shape
     I = np.identity(p)
     
@@ -80,7 +81,7 @@ def calculate_gcv(X, Y, τ):
     Y_pred = X @ beta
     
     # Smoother matrix
-    S = X @ np.linalg.inv(X.T @ X + n * τ * I) @ X.T
+    S = X @ np.linalg.inv(XTX + n * τ * I) @ X.T
     
     # Trace of smoother matrix
     trace_S = np.trace(S)
@@ -90,12 +91,15 @@ def calculate_gcv(X, Y, τ):
     
     return gcv / n
 
+@numba.njit(cache=True, fastmath=True, nogil=True)
 def find_optimal_tau(X, Y, τ_grid):
     optimal_τ = None
     lowest_gcv = np.inf
 
+    XTX = X.T @ X
+
     for τ in τ_grid:
-        gcv_score = calculate_gcv(X, Y, τ)
+        gcv_score = calculate_gcv(X, XTX, Y, τ)
         if gcv_score < lowest_gcv:
             lowest_gcv = gcv_score
             optimal_τ = τ
