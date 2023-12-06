@@ -128,7 +128,7 @@ def run_simulations_lambda_mu(parser):
         τ_array = np.append(τ_array, args.opt_tau)
     if len(args.tau_grid) != 0:
         τ_grid = np.linspace(args.tau_grid[0], args.tau_grid[1], int(args.tau_grid[2]))
-        np.append(τ_array, np.nan)
+        τ_array = np.append(τ_array, np.nan)
     snr_array = np.linspace(args.snr[0], args.snr[1], args.snr[2])
     σ = args.sigma
     activation_func = args.activation
