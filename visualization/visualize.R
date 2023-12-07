@@ -329,7 +329,23 @@ for (mu_val in unique(df$mu)){
     dev.off()
 }
 
-file_name <- 'results/Python/ridge_bias_linear_results_[06-12-2023_14:31:17-1858].csv'
+file_name <- 'results/Python/ridge_bias_linear_p_100_results_[07-12-2023_00:01:37-1655].csv'
+df <- read.csv(file_name)
+colnames(df) <- c('lambda', 'mu', 'p', 'true_p', 'n', 'tau', 'snr', 'MSE')
+df$gamma <- df$p / df$n
+df$transformed_gamma <- symlog_transform(df$gamma)
+for (mu_val in unique(df$mu)){
+    df_mu = subset(df, mu == mu_val)
+      
+    # Open a PNG device
+    png(paste0("visualization/figures/", expression(mu), '_', round(mu_val, 2), '_bias_tp_100_tau', ".png"), width = 800, height = 800)
+
+    draw_plots(df_mu, 'mu', tau_line=TRUE, lines=TRUE)
+    # Close the PNG device
+    dev.off()
+}
+
+file_name <- 'results/Python/ridge_bias_linear_p_100_results_[06-12-2023_14:31:17-1858].csv'
 df <- read.csv(file_name)
 colnames(df) <- c('lambda', 'mu', 'p', 'true_p', 'n', 'tau', 'snr', 'MSE')
 df$gamma <- df$p / df$n
@@ -345,3 +361,70 @@ for (lambda_val in unique(df$lambda)){
     # Close the PNG device
     dev.off()
 }
+
+file_name <- 'results/Python/ridge_bias_linear_p_400_results_[07-12-2023_10:58:58-1655].csv'
+df <- read.csv(file_name)
+colnames(df) <- c('lambda', 'mu', 'p', 'true_p', 'n', 'tau', 'snr', 'MSE')
+df$gamma <- df$p / df$n
+df$transformed_gamma <- symlog_transform(df$gamma)
+for (mu_val in unique(df$mu)){
+    df_mu = subset(df, mu == mu_val)
+      
+    # Open a PNG device
+    png(paste0("visualization/figures/", expression(mu), '_', round(mu_val, 2), '_bias_tp_400_tau', ".png"), width = 800, height = 800)
+
+    draw_plots(df_mu, 'mu', tau_line=TRUE, lines=TRUE)
+    # Close the PNG device
+    dev.off()
+}
+
+file_name <- 'results/Python/ridge_bias_linear_p_400_results_[07-12-2023_10:58:54-1858].csv'
+df <- read.csv(file_name)
+colnames(df) <- c('lambda', 'mu', 'p', 'true_p', 'n', 'tau', 'snr', 'MSE')
+df$gamma <- df$p / df$n
+df$transformed_gamma <- symlog_transform(df$gamma)
+for (lambda_val in unique(df$lambda)){
+    df_lambda = subset(df, lambda == lambda_val)
+      
+    # Open a PNG device
+    png(paste0("visualization/figures/", expression(lambda), '_', round(lambda_val, 2), "_bias_tp_400_tau", ".png"), width = 800, height = 800)
+    
+    draw_plots(df_lambda, 'lambda', tau_line=TRUE, lines=TRUE)
+    
+    # Close the PNG device
+    dev.off()
+}
+
+file_name <- 'results/Python/ridge_unbias_linear_results_[06-12-2023_23:07:06-16].csv'
+df <- read.csv(file_name)
+colnames(df) <- c('lambda', 'mu', 'p', 'n', 'tau', 'snr', 'MSE')
+df$gamma <- df$p / df$n
+df$transformed_gamma <- symlog_transform(df$gamma)
+for (mu_val in unique(df$mu)){
+    df_mu = subset(df, mu == mu_val)
+      
+    # Open a PNG device
+    png(paste0("visualization/figures/", expression(mu), '_', round(mu_val, 2), '_unbias_tau', ".png"), width = 800, height = 800)
+
+    draw_plots(df_mu, 'mu', tau_line=TRUE, lines=TRUE)
+    # Close the PNG device
+    dev.off()
+}
+
+file_name <- 'results/Python/ridge_unbias_linear_results_[07-12-2023_00:43:23-18].csv'
+df <- read.csv(file_name)
+colnames(df) <- c('lambda', 'mu', 'p', 'n', 'tau', 'snr', 'MSE')
+df$gamma <- df$p / df$n
+df$transformed_gamma <- symlog_transform(df$gamma)
+for (lambda_val in unique(df$lambda)){
+    df_lambda = subset(df, lambda == lambda_val)
+      
+    # Open a PNG device
+    png(paste0("visualization/figures/", expression(lambda), '_', round(lambda_val, 2), "_unbias_tau", ".png"), width = 800, height = 800)
+    
+    draw_plots(df_lambda, 'lambda', tau_line=TRUE, lines=TRUE)
+    
+    # Close the PNG device
+    dev.off()
+}
+
