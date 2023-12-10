@@ -129,12 +129,14 @@ def run_simulations_lambda_mu(parser):
         print('Fitting Ridgeless Least-squares')
         τ_array = np.array([0])
     else:
-        τ_array = np.log(np.arange(args.tau[0], args.tau[1], args.tau[2]))
+        τ_array = np.exp(np.arange(args.tau[0], args.tau[1], args.tau[2]))
     if len(args.opt_tau) != 0:
-        np.append(τ_array, args.opt_tau)
+        τ_array = np.append(τ_array, args.opt_tau)
     if len(args.tau_grid) != 0:
         τ_grid = np.linspace(args.tau_grid[0], args.tau_grid[1], int(args.tau_grid[2]))        
         τ_array = np.append(τ_array, np.nan)
+    else:
+        τ_grid = []
     snr_array = np.linspace(args.snr[0], args.snr[1], args.snr[2])
     σ = args.sigma
     activation_func = args.activation

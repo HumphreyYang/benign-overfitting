@@ -428,3 +428,70 @@ for (lambda_val in unique(df$lambda)){
     dev.off()
 }
 
+
+draw_ridge_plots <- function(df, title, y_max=10, y_gap=5){
+    # Initialize plot
+    plot(NULL, xlim = c(-1, 1), ylim = c(0, y_max), 
+        xlab = expression(gamma), ylab = 'MSE', 
+        xaxt = 'n', yaxt = 'n', xaxs = 'i', yaxs = 'i', 
+        cex.lab = 1.25, cex.axis = 1.25)
+
+    tau_legend <- numeric()
+    # Add custom axis
+    axis(1, at = symlog_transform(c(0.1, 0.2, 0.5, 1, 2, 5, 10)), 
+        labels = c(0.1, 0.2, 0.5, 1, 2, 5, 10))
+    axis(2, at = seq(0, y_max, by = y_gap))
+
+    # Add grid
+    abline(v = symlog_transform(c(0.1, 0.2, 0.5, 1, 2, 5, 10)), col = 'grey', lty = 2)
+    unique_tau = unique(df$tau)
+    for (i in 1:length(unique_tau)) {
+        tau_val <- unique_tau[i]
+        colors <- palette()
+    
+        # Subsetting based on tau value
+        sub_df <- subset(df, tau == tau_val)
+        print(subset(df, tau == 0))
+        print(colors[i])
+        lines(symlog_transform(sub_df$gamma), sub_df$MSE, lwd = 3)
+        points(sub_df$transformed_gamma, sub_df$MSE, pch = 19, cex=1.5)
+
+        tau_legend <- c(tau_legend, paste0('tau = ', round(tau_val, 2)))
+        
+        legend('topright', legend = tau_legend, col = colors, pch = 19, cex=2)
+    } 
+}
+
+
+file_name <- 'results/Python/ridge_bias_linear_p_100_results_[11-12-2023_01:46:08-1655].csv'
+df <- read.csv(file_name)
+colnames(df) <- c('lambda', 'mu', 'p', 'true_p', 'n', 'tau', 'snr', 'MSE')
+df$gamma <- df$p / df$n
+df$transformed_gamma <- symlog_transform(df$gamma)
+for (mu_val in unique(df$mu)){
+    df_mu = subset(df, mu == mu_val)
+      
+    # Open a PNG device
+    png(paste0("visualization/figures/", expression(mu), '_', round(mu_val, 2), '_bias_tau_legend', ".png"), width = 800, height = 800)
+
+    draw_ridge_plots(df_mu, 'mu')
+    # Close the PNG device
+    dev.off()
+}
+
+file_name <- 'results/Python/ridge_bias_linear_p_100_results_[10-12-2023_23:27:50-1858].csv'
+df <- read.csv(file_name)
+colnames(df) <- c('lambda', 'mu', 'p', 'true_p', 'n', 'tau', 'snr', 'MSE')
+df$gamma <- df$p / df$n
+df$transformed_gamma <- symlog_transform(df$gamma)
+for (lambda_val in unique(df$lambda)){
+    df_lambda = subset(df, lambda == lambda_val)
+      
+    # Open a PNG device
+    png(paste0("visualization/figures/", expression(lambda), '_', round(lambda_val, 2), "_bias_tau_legend", ".png"), width = 800, height = 800)
+    
+    draw_ridge_plots(df_lambda, 'lambda')
+    
+    # Close the PNG device
+    dev.off()
+}
