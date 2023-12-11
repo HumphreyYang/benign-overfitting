@@ -435,8 +435,11 @@ draw_ridge_plots <- function(df, title, y_max=10, y_gap=5){
         xlab = expression(gamma), ylab = 'MSE', 
         xaxt = 'n', yaxt = 'n', xaxs = 'i', yaxs = 'i', 
         cex.lab = 1.25, cex.axis = 1.25)
-
     tau_legend <- numeric()
+    unique_tau <- sort(unique(df$tau))
+    # Create a gradient of blue colors
+    blue_gradient <- colorRampPalette(colors = c("darkblue", "lightblue"))(length(unique_tau))
+
     # Add custom axis
     axis(1, at = symlog_transform(c(0.1, 0.2, 0.5, 1, 2, 5, 10)), 
         labels = c(0.1, 0.2, 0.5, 1, 2, 5, 10))
@@ -444,26 +447,20 @@ draw_ridge_plots <- function(df, title, y_max=10, y_gap=5){
 
     # Add grid
     abline(v = symlog_transform(c(0.1, 0.2, 0.5, 1, 2, 5, 10)), col = 'grey', lty = 2)
-    unique_tau = unique(df$tau)
+
     for (i in 1:length(unique_tau)) {
         tau_val <- unique_tau[i]
-        colors <- palette()
     
         # Subsetting based on tau value
         sub_df <- subset(df, tau == tau_val)
-        print(subset(df, tau == 0))
-        print(colors[i])
-        lines(symlog_transform(sub_df$gamma), sub_df$MSE, lwd = 3)
-        points(sub_df$transformed_gamma, sub_df$MSE, pch = 19, cex=1.5)
-
-        tau_legend <- c(tau_legend, paste0('tau = ', round(tau_val, 2)))
-        
-        legend('topright', legend = tau_legend, col = colors, pch = 19, cex=2)
+        lines(sub_df$transformed_gamma, sub_df$MSE, lwd = 5, col = blue_gradient[i])
+        rounded_value <- round(log(tau_val), 2)
+        tau_legend <- c(tau_legend, expression(log(tau) == round(log(tau_val), 2)))
+        legend('topright', legend = tau_legend, col = blue_gradient, lwd=4, cex=2)
     } 
 }
 
-
-file_name <- 'results/Python/ridge_bias_linear_p_100_results_[11-12-2023_01:46:08-1655].csv'
+file_name <- 'results/Python/ridge_bias_linear_p_100_results_[11-12-2023_10:16:00-1655].csv'
 df <- read.csv(file_name)
 colnames(df) <- c('lambda', 'mu', 'p', 'true_p', 'n', 'tau', 'snr', 'MSE')
 df$gamma <- df$p / df$n
@@ -479,7 +476,7 @@ for (mu_val in unique(df$mu)){
     dev.off()
 }
 
-file_name <- 'results/Python/ridge_bias_linear_p_100_results_[10-12-2023_23:27:50-1858].csv'
+file_name <- 'results/Python/ridge_bias_linear_p_100_results_[11-12-2023_09:03:44-1858].csv'
 df <- read.csv(file_name)
 colnames(df) <- c('lambda', 'mu', 'p', 'true_p', 'n', 'tau', 'snr', 'MSE')
 df$gamma <- df$p / df$n
